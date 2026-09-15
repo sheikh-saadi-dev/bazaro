@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Dashboard — Bazaro Admin</title>
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<div class="admin-shell" id="admin-shell">
+  <div class="admin-main">
+    <div class="admin-header-row"><h1 style="font-size:1.4rem;">Dashboard</h1></div>
+    <div class="stat-grid" id="stat-grid">
+      ${Array(8).fill('<div class="skel" style="height:80px"></div>').join("")}
+    </div>
+  </div>
+</div>
+<div id="toast-host"></div>
+<script type="module">
+  import { requireAdmin } from "./js/admin-auth.js";
+  import { mountAdminLayout } from "./js/admin-layout.js";
+  import { db, collection, getDocs } from "../js/firebase.js";
+  import { bdt } from "../js/utils.js";
+
+  await requireAdmin();
+  mountAdminLayout("dashboard.html");
+
+  async function loadStats() {
+    const [productsSnap, ordersSnap, usersSnap, couponsSnap] = await Promise.all([
+      getDocs(collection(db, "products")),
+      getDocs(collection(db, "orders")),
+      getDocs(collection(db, "users")),
+      getDocs(collection(db, "coupons")),
+    ]);
+    const products = productsSnap.docs.map(d => d.data());
+    const orders = ordersSnap.docs.map(d => d.data());
+    const users = usersSnap.docs.map(d => d.data());
+    const coupons = couponsSnap.docs.map(d => d.data());
+
+    const stats = [
+      ["Total Products", products.length],
+      ["Published Products", products.filter(p => p.status === "published").length],
+      ["Draft Products", products.filter(p => p.status === "draft").length],
+      ["Total Orders", orders.length],
+      ["Pending Orders", orders.filter(o => o.status === "pending").length],
+      ["Confirmed Orders", orders.filter(o => o.status === "confirmed").length],
+      ["Delivered Orders", orders.filter(o => o.status === "delivered").length],
+      ["Total Customers", users.filter(u => u.role !== "admin").length],
+      ["Total Sales", bdt(orders.filter(o => o.status === "delivered").reduce((s, o) => s + (o.total || 0), 0))],
+      ["Active Coupons", coupons.filter(c => c.active).length],
+    ];
+
+    document.getElementById("stat-grid").innerHTML = stats.map(([label, value]) => `
+      <div class="stat-card"><div class="stat-value">${value}</div><div class="stat-label">${label}</div></div>
+    `).join("");
+  }
+  loadStats();
+</script>
+</body>
+</html>

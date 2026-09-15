@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Products — Bazaro Admin</title>
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<div class="admin-shell" id="admin-shell">
+  <div class="admin-main">
+    <div class="admin-header-row">
+      <h1 style="font-size:1.4rem;">Products</h1>
+      <a class="btn btn-primary" href="product-form.html">Add product</a>
+    </div>
+    <div class="filter-tabs" id="status-tabs">
+      <button data-status="" class="active">All</button>
+      <button data-status="published">Published</button>
+      <button data-status="draft">Draft</button>
+    </div>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="products-tbody"><tr><td colspan="7"><div class="skel" style="height:120px"></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div id="toast-host"></div>
+<script type="module">
+  import { requireAdmin } from "./js/admin-auth.js";
+  import { mountAdminLayout } from "./js/admin-layout.js";
+  import { db, collection, getDocs, doc, updateDoc, deleteDoc } from "../js/firebase.js";
+  import { bdt, escapeHtml, toast } from "../js/utils.js";
+  import { confirmModal } from "./js/admin-ui.js";
+
+  await requireAdmin();
+  mountAdminLayout("products.html");
+
+  let products = [];
+  let statusFilter = "";
+
+  async function load() {
+    const snap = await getDocs(collection(db, "products"));
+    products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  }
+
+  function render() {
+    const list = statusFilter ? products.filter(p => p.status === statusFilter) : products;
+    const tbody = document.getElementById("products-tbody");
+    tbody.innerHTML = list.length ? list.map(p => `
+      <tr>
+        <td data-label="Image"><img class="thumb" src="${(p.images && p.images[0]) || p.imageUrl || "https://placehold.co/60"}" alt=""></td>
+        <td data-label="Name">${escapeHtml(p.name)}</td>
+        <td data-label="Category">${escapeHtml(p.categoryName || "")}</td>
+        <td data-label="Price">${bdt(p.discountPrice || p.price)}</td>
+        <td data-label="Stock">${p.stock ?? 0}</td>
+        <td data-label="Status">${p.status === "published" ? "Published" : "Draft"}</td>
+        <td data-label="Actions">
+          <a class="action-link" href="product-form.html?id=${p.id}">Edit</a>
+          <button class="action-link" data-toggle="${p.id}">${p.status === "published" ? "Draft" : "Publish"}</button>
+          <button class="action-link danger" data-del="${p.id}">Delete</button>
+        </td>
+      </tr>`).join("") : `<tr><td colspan="7"><div class="empty-state">No products yet.</div></td></tr>`;
+
+    tbody.querySelectorAll("[data-toggle]").forEach(b => b.addEventListener("click", async () => {
+      const p = products.find(x => x.id === b.dataset.toggle);
+      const next = p.status === "published" ? "draft" : "published";
+      await updateDoc(doc(db, "products", p.id), { status: next });
+      toast(next === "published" ? "Product published." : "Product moved to draft.");
+      load();
+    }));
+    tbody.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", async () => {
+      const ok = await confirmModal("Delete this product?", "This can't be undone.");
+      if (!ok) return;
+      await deleteDoc(doc(db, "products", b.dataset.del));
+      toast("Product deleted.");
+      load();
+    }));
+  }
+
+  document.getElementById("status-tabs").addEventListener("click", (e) => {
+    if (e.target.tagName !== "BUTTON") return;
+    document.querySelectorAll("#status-tabs button").forEach(b => b.classList.remove("active"));
+    e.target.classList.add("active");
+    statusFilter = e.target.dataset.status;
+    render();
+  });
+
+  load();
+</script>
+</body>
+</html>

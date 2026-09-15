@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Categories — Bazaro Admin</title>
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<div class="admin-shell" id="admin-shell">
+  <div class="admin-main">
+    <h1 style="font-size:1.4rem;">Categories</h1>
+    <div id="crud-root"></div>
+  </div>
+</div>
+<div id="toast-host"></div>
+<script type="module">
+  import { requireAdmin } from "./js/admin-auth.js";
+  import { mountAdminLayout } from "./js/admin-layout.js";
+  import { mountCrudPage } from "./js/admin-crud.js";
+
+  await requireAdmin();
+  mountAdminLayout("categories.html");
+
+  mountCrudPage({
+    collectionName: "categories",
+    title: "Category",
+    addLabel: "Add category",
+    emptyMessage: "No categories yet.",
+    columns: [
+      { key: "name", label: "Name" },
+      { key: "active", label: "Status", render: (i) => i.active ? "Active" : "Disabled" },
+    ],
+    fields: [
+      { key: "name", label: "Category name", required: true },
+      { key: "active", label: "Active", type: "toggle", default: true },
+    ]
+  });
+</script>
+</body>
+</html>

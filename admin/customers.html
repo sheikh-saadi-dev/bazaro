@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Customers — Bazaro Admin</title>
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<div class="admin-shell" id="admin-shell">
+  <div class="admin-main">
+    <h1 style="font-size:1.4rem;">Customers</h1>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Registered</th><th>Orders</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="customers-tbody"><tr><td colspan="7"><div class="skel" style="height:140px"></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div id="toast-host"></div>
+<script type="module">
+  import { requireAdmin } from "./js/admin-auth.js";
+  import { mountAdminLayout } from "./js/admin-layout.js";
+  import { db, collection, getDocs, query, where, doc, updateDoc, deleteDoc } from "../js/firebase.js";
+  import { escapeHtml, toast } from "../js/utils.js";
+  import { confirmModal } from "./js/admin-ui.js";
+
+  await requireAdmin();
+  mountAdminLayout("customers.html");
+
+  async function load() {
+    const [usersSnap, ordersSnap] = await Promise.all([
+      getDocs(query(collection(db, "users"), where("role", "==", "customer"))),
+      getDocs(collection(db, "orders"))
+    ]);
+    const orders = ordersSnap.docs.map(d => d.data());
+    const users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render(users, orders);
+  }
+
+  function render(users, orders) {
+    const tbody = document.getElementById("customers-tbody");
+    tbody.innerHTML = users.length ? users.map(u => {
+      const orderCount = orders.filter(o => o.userId === u.id).length;
+      return `
+      <tr data-id="${u.id}">
+        <td data-label="Name">${escapeHtml(u.name || "")}</td>
+        <td data-label="Email">${escapeHtml(u.email || "")}</td>
+        <td data-label="Phone">${escapeHtml(u.phone || "")}</td>
+        <td data-label="Registered">${u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString() : ""}</td>
+        <td data-label="Orders">${orderCount}</td>
+        <td data-label="Status">${u.status === "disabled" ? "Disabled" : "Active"}</td>
+        <td data-label="Actions">
+          <button class="action-link" data-toggle="${u.id}">${u.status === "disabled" ? "Enable" : "Reject/Disable"}</button>
+          <button class="action-link danger" data-del="${u.id}">Delete</button>
+        </td>
+      </tr>`;
+    }).join("") : `<tr><td colspan="7"><div class="empty-state">No customers yet.</div></td></tr>`;
+
+    tbody.querySelectorAll("[data-toggle]").forEach(b => b.addEventListener("click", async () => {
+      const u = users.find(x => x.id === b.dataset.toggle);
+      const next = u.status === "disabled" ? "active" : "disabled";
+      await updateDoc(doc(db, "users", u.id), { status: next });
+      toast(next === "disabled" ? "Customer account disabled." : "Customer account re-enabled.");
+      load();
+    }));
+    tbody.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", async () => {
+      const ok = await confirmModal("Delete this customer?", "This removes their profile document. Their Firebase Auth login must be removed separately from the Firebase console.");
+      if (!ok) return;
+      await deleteDoc(doc(db, "users", b.dataset.del));
+      toast("Customer deleted.");
+      load();
+    }));
+  }
+
+  load();
+</script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin Login — Bazaro</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<main>
+  <div class="auth-shell" style="margin-top:100px;">
+    <h1>Admin login</h1>
+    <p class="muted">Restricted access.</p>
+    <form id="admin-login-form" novalidate>
+      <div class="field"><label for="email">Email</label><input id="email" type="email" required></div>
+      <div class="field" style="margin-top:10px;"><label for="password">Password</label><input id="password" type="password" required></div>
+      <div class="field-error" id="form-error" style="margin-top:6px;"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:14px;" type="submit">Log in</button>
+    </form>
+  </div>
+</main>
+<div id="toast-host"></div>
+<script type="module">
+  import { auth, db, doc, getDoc, signInWithEmailAndPassword, signOut } from "../js/firebase.js";
+  import { friendlyAuthError } from "../js/auth.js";
+  import { toast } from "../js/utils.js";
+
+  const params = new URLSearchParams(location.search);
+  if (params.get("err") === "unauthorized") {
+    document.getElementById("form-error").textContent = "That account doesn't have admin access.";
+  }
+
+  document.getElementById("admin-login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const err = document.getElementById("form-error");
+    err.textContent = "";
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const snap = await getDoc(doc(db, "users", cred.user.uid));
+      if (!snap.exists() || snap.data().role !== "admin") {
+        await signOut(auth);
+        err.textContent = "That account doesn't have admin access.";
+        return;
+      }
+      window.location.href = "dashboard.html";
+    } catch (e2) {
+      err.textContent = friendlyAuthError(e2.code);
+    }
+  });
+</script>
+</body>
+</html>

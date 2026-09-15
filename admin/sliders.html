@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Sliders — Bazaro Admin</title>
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<div class="admin-shell" id="admin-shell">
+  <div class="admin-main">
+    <h1 style="font-size:1.4rem;">Homepage Sliders</h1>
+    <div id="crud-root"></div>
+  </div>
+</div>
+<div id="toast-host"></div>
+<script type="module">
+  import { requireAdmin } from "./js/admin-auth.js";
+  import { mountAdminLayout } from "./js/admin-layout.js";
+  import { mountCrudPage } from "./js/admin-crud.js";
+
+  await requireAdmin();
+  mountAdminLayout("sliders.html");
+
+  mountCrudPage({
+    collectionName: "sliders",
+    title: "Slider",
+    addLabel: "Add slider",
+    orderByField: "order",
+    emptyMessage: "No sliders yet — the homepage will show a default set until you add some.",
+    columns: [
+      { key: "imageUrl", label: "Image", render: (i) => `<img class="thumb" src="${i.imageUrl || ""}" alt="">` },
+      { key: "title", label: "Title" },
+      { key: "order", label: "Order" },
+      { key: "active", label: "Status", render: (i) => i.active ? "Active" : "Disabled" },
+    ],
+    fields: [
+      { key: "imageUrl", label: "Image URL", required: true },
+      { key: "title", label: "Title", required: true },
+      { key: "description", label: "Description", type: "textarea" },
+      { key: "buttonText", label: "Button text" },
+      { key: "buttonUrl", label: "Button link" },
+      { key: "order", label: "Display order", type: "number", default: 1 },
+      { key: "active", label: "Active", type: "toggle", default: true },
+    ]
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Settings — Bazaro Admin</title>
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<div class="admin-shell" id="admin-shell">
+  <div class="admin-main" style="max-width:640px;">
+    <h1 style="font-size:1.4rem;">Settings</h1>
+    <form id="settings-form">
+      <h3 style="font-size:1rem;">Delivery</h3>
+      <div class="form-grid">
+        <div class="field"><label>Inside Dhaka charge (৳)</label><input id="s-inside" type="number" min="0" required></div>
+        <div class="field"><label>Outside Dhaka charge (৳)</label><input id="s-outside" type="number" min="0" required></div>
+      </div>
+
+      <h3 style="font-size:1rem;margin-top:20px;">Store</h3>
+      <div class="field"><label>Store name</label><input id="s-name" required></div>
+      <div class="field" style="margin-top:10px;"><label>Store description</label><textarea id="s-desc" rows="2"></textarea></div>
+      <div class="form-grid" style="margin-top:10px;">
+        <div class="field"><label>Contact phone</label><input id="s-phone"></div>
+        <div class="field"><label>Contact email</label><input id="s-email" type="email"></div>
+      </div>
+      <div class="field" style="margin-top:10px;"><label>Address</label><input id="s-address"></div>
+
+      <h3 style="font-size:1rem;margin-top:20px;">Social</h3>
+      <div class="form-grid">
+        <div class="field"><label>Facebook URL</label><input id="s-fb"></div>
+        <div class="field"><label>Instagram URL</label><input id="s-ig"></div>
+        <div class="field"><label>YouTube URL</label><input id="s-yt"></div>
+      </div>
+
+      <button class="btn btn-primary" style="margin-top:20px;" type="submit">Save settings</button>
+    </form>
+  </div>
+</div>
+<div id="toast-host"></div>
+<script type="module">
+  import { requireAdmin } from "./js/admin-auth.js";
+  import { mountAdminLayout } from "./js/admin-layout.js";
+  import { db, doc, getDoc, setDoc } from "../js/firebase.js";
+  import { toast } from "../js/utils.js";
+
+  await requireAdmin();
+  mountAdminLayout("settings.html");
+
+  const fieldMap = {
+    "s-inside": "deliveryInsideDhaka", "s-outside": "deliveryOutsideDhaka",
+    "s-name": "storeName", "s-desc": "description", "s-phone": "phone", "s-email": "email", "s-address": "address",
+    "s-fb": "facebook", "s-ig": "instagram", "s-yt": "youtube"
+  };
+
+  async function load() {
+    const snap = await getDoc(doc(db, "settings", "store"));
+    const data = snap.exists() ? snap.data() : { deliveryInsideDhaka: 60, deliveryOutsideDhaka: 120, storeName: "Bazaro" };
+    Object.entries(fieldMap).forEach(([id, key]) => { if (data[key] != null) document.getElementById(id).value = data[key]; });
+  }
+
+  document.getElementById("settings-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const data = {};
+    Object.entries(fieldMap).forEach(([id, key]) => {
+      const el = document.getElementById(id);
+      data[key] = el.type === "number" ? Number(el.value) || 0 : el.value.trim();
+    });
+    try {
+      await setDoc(doc(db, "settings", "store"), data, { merge: true });
+      toast("Settings saved.");
+    } catch (err) { toast("Couldn't save settings.", "err"); }
+  });
+
+  load();
+</script>
+</body>
+</html>

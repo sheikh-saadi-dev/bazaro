@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Orders — Bazaro Admin</title>
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<div class="admin-shell" id="admin-shell">
+  <div class="admin-main">
+    <h1 style="font-size:1.4rem;">Orders</h1>
+    <div class="filter-tabs" id="status-tabs">
+      <button data-status="" class="active">All</button>
+      <button data-status="pending">Pending</button>
+      <button data-status="confirmed">Confirmed</button>
+      <button data-status="delivered">Delivered</button>
+    </div>
+    <div class="search-box" style="max-width:360px;margin-bottom:14px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="search-input" placeholder="Search by order ID, name or phone">
+    </div>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>Order ID</th><th>Customer</th><th>Phone</th><th>Total</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody id="orders-tbody"><tr><td colspan="7"><div class="skel" style="height:140px"></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div id="toast-host"></div>
+<script type="module" src="js/admin-orders.js"></script>
+</body>
+</html>

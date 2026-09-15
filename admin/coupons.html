@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Coupons — Bazaro Admin</title>
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<div class="admin-shell" id="admin-shell">
+  <div class="admin-main">
+    <h1 style="font-size:1.4rem;">Coupons</h1>
+    <div id="crud-root"></div>
+  </div>
+</div>
+<div id="toast-host"></div>
+<script type="module">
+  import { requireAdmin } from "./js/admin-auth.js";
+  import { mountAdminLayout } from "./js/admin-layout.js";
+  import { mountCrudPage } from "./js/admin-crud.js";
+  import { bdt } from "../js/utils.js";
+
+  await requireAdmin();
+  mountAdminLayout("coupons.html");
+
+  mountCrudPage({
+    collectionName: "coupons",
+    title: "Coupon",
+    addLabel: "Add coupon",
+    emptyMessage: "No coupons yet.",
+    columns: [
+      { key: "code", label: "Code" },
+      { key: "discountType", label: "Type" },
+      { key: "discountAmount", label: "Amount", render: (i) => i.discountType === "percentage" ? `${i.discountAmount}%` : bdt(i.discountAmount) },
+      { key: "usedCount", label: "Used", render: (i) => `${i.usedCount || 0}${i.usageLimit ? " / " + i.usageLimit : ""}` },
+      { key: "active", label: "Status", render: (i) => i.active ? "Active" : "Disabled" },
+    ],
+    fields: [
+      { key: "code", label: "Coupon code (e.g. SAVE10)", required: true, transform: (v) => v.trim().toUpperCase() },
+      { key: "discountType", label: "Discount type", type: "select", options: [{ value: "percentage", label: "Percentage" }, { value: "fixed", label: "Fixed amount" }], default: "percentage" },
+      { key: "discountAmount", label: "Discount amount", type: "number", required: true },
+      { key: "minOrderAmount", label: "Minimum order amount (৳)", type: "number" },
+      { key: "maxDiscount", label: "Maximum discount (৳, for %)", type: "number" },
+      { key: "startDate", label: "Start date", type: "date" },
+      { key: "expiryDate", label: "Expiry date", type: "date" },
+      { key: "usageLimit", label: "Usage limit", type: "number" },
+      { key: "active", label: "Active", type: "toggle", default: true },
+    ]
+  });
+</script>
+</body>
+</html>
