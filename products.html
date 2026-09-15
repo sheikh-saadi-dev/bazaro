@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>All Products — Bazaro</title>
+<meta name="description" content="Browse all products at Bazaro — filter by category and price.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div id="app-header"></div>
+
+<main id="main">
+  <section class="section">
+    <div class="wrap">
+      <h1 class="display" style="font-size:1.8rem">Products</h1>
+      <div class="toolbar">
+        <div class="search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="search" id="search-input" placeholder="Search products, categories…" aria-label="Search products">
+        </div>
+        <select class="select" id="sort-select" aria-label="Sort products">
+          <option value="featured">Featured</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="newest">Newest</option>
+          <option value="best-selling">Best Selling</option>
+        </select>
+      </div>
+      <div class="layout-with-sidebar">
+        <aside class="filter-sidebar">
+          <h4>Category</h4>
+          <div class="chip-list" id="category-filters"><label class="muted">Loading…</label></div>
+          <h4>Price range (৳)</h4>
+          <div class="range-row">
+            <input type="number" id="price-min" placeholder="Min">
+            <input type="number" id="price-max" placeholder="Max">
+          </div>
+          <button class="btn btn-outline btn-sm btn-block" id="clear-filters" style="margin-top:12px;">Clear filters</button>
+        </aside>
+        <div>
+          <p class="muted" id="result-count"></p>
+          <div class="grid-products" id="product-grid">
+            ${Array(8).fill('<div class="skel skel-card"></div>').join("")}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="app-footer"></div>
+<div id="toast-host"></div>
+
+<script type="module">
+  import { mountHeader, mountFooter } from "./js/layout.js";
+  import { fetchPublishedProducts, fetchCategories, productCard, wireProductCardEvents, sortProducts } from "./js/products.js";
+  import { debounce } from "./js/utils.js";
+
+  mountHeader("products");
+  mountFooter();
+
+  const params = new URLSearchParams(location.search);
+  let allProducts = [];
+  let state = {
+    search: "", category: params.get("category") || "", min: null, max: null,
+    sort: params.get("sort") || "featured",
+    filter: params.get("filter") || ""
+  };
+
+  function applyFilters() {
+    let list = allProducts;
+    if (state.filter === "topsale") list = list.filter(p => p.isTopSale);
+    if (state.search) {
+      const q = state.search.toLowerCase();
+      list = list.filter(p => (p.name || "").toLowerCase().includes(q) || (p.categoryName || "").toLowerCase().includes(q));
+    }
+    if (state.category) list = list.filter(p => p.categoryId === state.category);
+    if (state.min != null) list = list.filter(p => (p.discountPrice || p.price) >= state.min);
+    if (state.max != null) list = list.filter(p => (p.discountPrice || p.price) <= state.max);
+    list = sortProducts(list, state.sort);
+    document.getElementById("result-count").textContent = `${list.length} product${list.length === 1 ? "" : "s"}`;
+    const grid = document.getElementById("product-grid");
+    grid.innerHTML = list.length ? list.map(productCard).join("") : `<div class="empty-state" style="grid-column:1/-1"><p>No products found.</p></div>`;
+    wireProductCardEvents(grid, list);
+  }
+
+  async function init() {
+    let categories = [];
+    try {
+      [allProducts, categories] = await Promise.all([fetchPublishedProducts(), fetchCategories()]);
+    } catch (e) {
+      document.getElementById("product-grid").innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Couldn't load products right now.</p></div>`;
+      return;
+    }
+    const catHost = document.getElementById("category-filters");
+    catHost.innerHTML = `<label><input type="radio" name="cat" value="" ${!state.category ? "checked" : ""}> All</label>` +
+      categories.map(c => `<label><input type="radio" name="cat" value="${c.id}" ${state.category === c.id ? "checked" : ""}> ${c.name}</label>`).join("");
+    catHost.addEventListener("change", (e) => { state.category = e.target.value; applyFilters(); });
+    document.getElementById("sort-select").value = state.sort;
+    document.getElementById("search-input").addEventListener("input", debounce((e) => { state.search = e.target.value; applyFilters(); }, 220));
+    document.getElementById("sort-select").addEventListener("change", (e) => { state.sort = e.target.value; applyFilters(); });
+    document.getElementById("price-min").addEventListener("change", (e) => { state.min = e.target.value ? +e.target.value : null; applyFilters(); });
+    document.getElementById("price-max").addEventListener("change", (e) => { state.max = e.target.value ? +e.target.value : null; applyFilters(); });
+    document.getElementById("clear-filters").addEventListener("click", () => {
+      state = { search: "", category: "", min: null, max: null, sort: "featured", filter: "" };
+      document.getElementById("search-input").value = "";
+      document.getElementById("price-min").value = "";
+      document.getElementById("price-max").value = "";
+      document.getElementById("sort-select").value = "featured";
+      catHost.querySelector('input[value=""]').checked = true;
+      applyFilters();
+    });
+    applyFilters();
+  }
+  init();
+</script>
+</body>
+</html>

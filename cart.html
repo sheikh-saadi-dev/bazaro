@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cart — Bazaro</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .tab-btn { padding: 9px 16px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-weight: 600; font-size: .88rem; color: var(--ink-soft); }
+  .tab-btn.active { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+  .cart-page-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 30px; align-items: start; }
+  @media (max-width: 860px) { .cart-page-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div id="app-header"></div>
+<main id="main">
+  <section class="section">
+    <div class="wrap">
+      <h1 class="display" style="font-size:1.7rem">Your cart</h1>
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-cart">Cart</button>
+        <button class="tab-btn" id="tab-wishlist">Wishlist</button>
+      </div>
+      <div id="cart-view" class="cart-page-grid">
+        <div id="cart-lines"><div class="skel" style="height:200px"></div></div>
+        <div class="summary-card">
+          <div class="summary-row"><span>Subtotal</span><span id="sum-subtotal">৳0</span></div>
+          <div class="summary-row"><span>Delivery</span><span>Calculated at checkout</span></div>
+          <div class="summary-row total"><span>Estimated total</span><span id="sum-total">৳0</span></div>
+          <button class="btn btn-primary btn-block" id="checkout-btn" style="margin-top:14px;">Proceed to checkout</button>
+        </div>
+      </div>
+      <div id="wishlist-view" class="grid-products" style="display:none;"></div>
+    </div>
+  </section>
+</main>
+<div id="app-footer"></div>
+<div id="toast-host"></div>
+
+<script type="module">
+  import { mountHeader, mountFooter } from "./js/layout.js";
+  import { getLocalCart, bdt, escapeHtml, getLocalWishlist } from "./js/utils.js";
+  import { updateQty, removeFromCart, cartTotals, onCartReady } from "./js/cart.js";
+  import { fetchPublishedProducts, productCard, wireProductCardEvents } from "./js/products.js";
+  import { toggleWishlist } from "./js/wishlist.js";
+
+  mountHeader("wishlist");
+  mountFooter();
+
+  document.getElementById("tab-cart").addEventListener("click", () => switchTab("cart"));
+  document.getElementById("tab-wishlist").addEventListener("click", () => switchTab("wishlist"));
+  function switchTab(which) {
+    document.getElementById("tab-cart").classList.toggle("active", which === "cart");
+    document.getElementById("tab-wishlist").classList.toggle("active", which === "wishlist");
+    document.getElementById("cart-view").style.display = which === "cart" ? "grid" : "none";
+    document.getElementById("wishlist-view").style.display = which === "wishlist" ? "grid" : "none";
+    if (which === "wishlist") renderWishlist();
+  }
+
+  function renderCart() {
+    const items = getLocalCart();
+    const host = document.getElementById("cart-lines");
+    if (!items.length) {
+      host.innerHTML = `<div class="empty-state"><p>Your cart is empty.</p><a class="btn btn-primary" href="products.html">Continue shopping</a></div>`;
+    } else {
+      host.innerHTML = items.map(i => `
+        <div class="cart-line" data-key="${i.productId}::${i.variant ? escapeHtml(JSON.stringify(i.variant)) : ""}">
+          <img src="${i.image || "https://placehold.co/100x100"}" alt="${escapeHtml(i.name)}">
+          <div>
+            <div class="cart-line-name">${escapeHtml(i.name)}</div>
+            ${i.variant ? `<div class="cart-line-variant">${Object.entries(i.variant).map(([k, v]) => `${k}: ${v}`).join(", ")}</div>` : ""}
+            <div style="margin-top:8px;display:flex;align-items:center;gap:12px;">
+              <div class="qty-stepper">
+                <button type="button" data-dec>−</button>
+                <input type="number" value="${i.qty}" data-qty readonly>
+                <button type="button" data-inc>+</button>
+              </div>
+              <button class="cart-line-remove" data-remove>Remove</button>
+            </div>
+          </div>
+          <div style="text-align:right;font-weight:700;">${bdt(i.price * i.qty)}</div>
+        </div>
+      `).join("");
+
+      host.querySelectorAll(".cart-line").forEach(line => {
+        const [productId, variantStr] = line.dataset.key.split("::");
+        const variant = variantStr ? JSON.parse(variantStr) : null;
+        line.querySelector("[data-inc]").addEventListener("click", () => {
+          const cur = getLocalCart().find(x => x.productId === productId && JSON.stringify(x.variant) === JSON.stringify(variant));
+          updateQty(productId, variant, (cur?.qty || 1) + 1);
+        });
+        line.querySelector("[data-dec]").addEventListener("click", () => {
+          const cur = getLocalCart().find(x => x.productId === productId && JSON.stringify(x.variant) === JSON.stringify(variant));
+          updateQty(productId, variant, (cur?.qty || 1) - 1);
+        });
+        line.querySelector("[data-remove]").addEventListener("click", () => removeFromCart(productId, variant));
+      });
+    }
+    const { subtotal, total } = cartTotals(items);
+    document.getElementById("sum-subtotal").textContent = bdt(subtotal);
+    document.getElementById("sum-total").textContent = bdt(total);
+    document.getElementById("checkout-btn").disabled = items.length === 0;
+  }
+
+  document.getElementById("checkout-btn").addEventListener("click", () => {
+    if (getLocalCart().length) window.location.href = "checkout.html";
+  });
+
+  async function renderWishlist() {
+    const host = document.getElementById("wishlist-view");
+    const ids = getLocalWishlist();
+    if (!ids.length) { host.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>No products in your wishlist.</p></div>`; return; }
+    host.innerHTML = `<div class="skel skel-card" style="grid-column:1/-1"></div>`;
+    const all = await fetchPublishedProducts();
+    const items = all.filter(p => ids.includes(p.id));
+    host.innerHTML = items.length ? items.map(productCard).join("") : `<div class="empty-state" style="grid-column:1/-1"><p>No products in your wishlist.</p></div>`;
+    wireProductCardEvents(host, items);
+  }
+
+  onCartReady(renderCart);
+  window.addEventListener("cart:changed", renderCart);
+  renderCart();
+</script>
+</body>
+</html>

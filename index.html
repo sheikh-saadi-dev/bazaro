@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bazaro — Everyday goods, delivered</title>
+<meta name="description" content="Shop electronics, fashion, home and beauty essentials with cash on delivery across Bangladesh.">
+<meta property="og:title" content="Bazaro — Everyday goods, delivered">
+<meta property="og:description" content="Shop electronics, fashion, home and beauty essentials with cash on delivery across Bangladesh.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div id="app-header"></div>
+
+<main id="main">
+  <div class="hero" id="hero-root"></div>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Top products</h2>
+        <a href="products.html" class="muted">View all →</a>
+      </div>
+      <div class="rail" id="top-products-rail">
+        ${Array(5).fill('<div class="skel skel-card"></div>').join("")}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>All products</h2>
+      </div>
+      <div class="toolbar">
+        <div class="search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="search" id="search-input" placeholder="Search products, categories…" aria-label="Search products">
+        </div>
+        <select class="select" id="sort-select" aria-label="Sort products">
+          <option value="featured">Featured</option>
+          <option value="price-asc">Price: Low to High</option>
+          <option value="price-desc">Price: High to Low</option>
+          <option value="newest">Newest</option>
+          <option value="best-selling">Best Selling</option>
+        </select>
+      </div>
+      <div class="layout-with-sidebar">
+        <aside class="filter-sidebar">
+          <h4>Category</h4>
+          <div class="chip-list" id="category-filters"><label class="muted">Loading…</label></div>
+          <h4>Price range (৳)</h4>
+          <div class="range-row">
+            <input type="number" class="field-input" id="price-min" placeholder="Min">
+            <input type="number" class="field-input" id="price-max" placeholder="Max">
+          </div>
+          <button class="btn btn-outline btn-sm btn-block" id="clear-filters" style="margin-top:12px;">Clear filters</button>
+        </aside>
+        <div>
+          <div class="grid-products" id="product-grid">
+            ${Array(8).fill('<div class="skel skel-card"></div>').join("")}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Top sale</h2>
+      </div>
+      <div class="grid-products" id="topsale-grid">
+        ${Array(4).fill('<div class="skel skel-card"></div>').join("")}
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="app-footer"></div>
+<div id="toast-host"></div>
+
+<script type="module">
+  import { mountHeader, mountFooter } from "./js/layout.js";
+  import { mountHero } from "./js/slider.js";
+  import { fetchPublishedProducts, fetchCategories, productCard, wireProductCardEvents, sortProducts } from "./js/products.js";
+  import { debounce } from "./js/utils.js";
+
+  mountHeader("home");
+  mountFooter();
+  mountHero();
+
+  let allProducts = [];
+  let categories = [];
+  let state = { search: "", category: "", min: null, max: null, sort: "featured" };
+
+  function applyFilters() {
+    let list = allProducts;
+    if (state.search) {
+      const q = state.search.toLowerCase();
+      list = list.filter(p => (p.name || "").toLowerCase().includes(q) || (p.categoryName || "").toLowerCase().includes(q));
+    }
+    if (state.category) list = list.filter(p => p.categoryId === state.category);
+    if (state.min != null) list = list.filter(p => (p.discountPrice || p.price) >= state.min);
+    if (state.max != null) list = list.filter(p => (p.discountPrice || p.price) <= state.max);
+    list = sortProducts(list, state.sort);
+    const grid = document.getElementById("product-grid");
+    grid.innerHTML = list.length ? list.map(productCard).join("") : `
+      <div class="empty-state" style="grid-column:1/-1">
+        <p>No products found.</p>
+      </div>`;
+    wireProductCardEvents(grid, list);
+  }
+
+  async function init() {
+    try {
+      [allProducts, categories] = await Promise.all([fetchPublishedProducts(), fetchCategories()]);
+    } catch (e) {
+      document.getElementById("product-grid").innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p>Couldn't load products right now.</p></div>`;
+      return;
+    }
+
+    const catHost = document.getElementById("category-filters");
+    catHost.innerHTML = `<label><input type="radio" name="cat" value="" checked> All</label>` +
+      categories.map(c => `<label><input type="radio" name="cat" value="${c.id}"> ${c.name}</label>`).join("");
+    catHost.addEventListener("change", (e) => { state.category = e.target.value; applyFilters(); });
+
+    document.getElementById("search-input").addEventListener("input", debounce((e) => { state.search = e.target.value; applyFilters(); }, 220));
+    document.getElementById("sort-select").addEventListener("change", (e) => { state.sort = e.target.value; applyFilters(); });
+    document.getElementById("price-min").addEventListener("change", (e) => { state.min = e.target.value ? +e.target.value : null; applyFilters(); });
+    document.getElementById("price-max").addEventListener("change", (e) => { state.max = e.target.value ? +e.target.value : null; applyFilters(); });
+    document.getElementById("clear-filters").addEventListener("click", () => {
+      state = { search: "", category: "", min: null, max: null, sort: "featured" };
+      document.getElementById("search-input").value = "";
+      document.getElementById("price-min").value = "";
+      document.getElementById("price-max").value = "";
+      document.getElementById("sort-select").value = "featured";
+      catHost.querySelector('input[value=""]').checked = true;
+      applyFilters();
+    });
+
+    applyFilters();
+
+    const top = allProducts.filter(p => p.isTopProduct);
+    const topHost = document.getElementById("top-products-rail");
+    topHost.innerHTML = top.length ? top.map(productCard).join("") : `<p class="muted">No top products yet — mark some as "Top Product" in the admin panel.</p>`;
+    wireProductCardEvents(topHost, top);
+
+    const sale = allProducts.filter(p => p.isTopSale);
+    const saleHost = document.getElementById("topsale-grid");
+    saleHost.innerHTML = sale.length ? sale.map(productCard).join("") : `<p class="muted">No top-sale items yet — mark some as "Top Sale" in the admin panel.</p>`;
+    wireProductCardEvents(saleHost, sale);
+  }
+  init();
+</script>
+</body>
+</html>

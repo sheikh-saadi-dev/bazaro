@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create account — Bazaro</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app-header"></div>
+<main>
+  <div class="auth-shell">
+    <h1>Create your account</h1>
+    <p class="muted">Save your details for faster checkout.</p>
+    <form id="register-form" novalidate>
+      <div class="field"><label for="name">Full name</label><input id="name" required></div>
+      <div class="field" style="margin-top:10px;"><label for="email">Email</label><input id="email" type="email" required></div>
+      <div class="field" style="margin-top:10px;"><label for="phone">Mobile number</label><input id="phone"></div>
+      <div class="field" style="margin-top:10px;"><label for="password">Password</label><input id="password" type="password" required minlength="6"></div>
+      <div class="field-error" id="form-error" style="margin-top:6px;"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:14px;" type="submit">Create account</button>
+    </form>
+    <div class="auth-switch">Already have an account? <a href="login.html">Log in</a></div>
+  </div>
+</main>
+<div id="app-footer"></div>
+<div id="toast-host"></div>
+<script type="module">
+  import { mountHeader, mountFooter } from "./js/layout.js";
+  import { registerUser, friendlyAuthError } from "./js/auth.js";
+  import { toast } from "./js/utils.js";
+  mountHeader(); mountFooter();
+
+  document.getElementById("register-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const err = document.getElementById("form-error");
+    err.textContent = "";
+    try {
+      await registerUser({
+        name: document.getElementById("name").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+        password: document.getElementById("password").value
+      });
+      toast("Account created.");
+      window.location.href = "account.html";
+    } catch (e2) {
+      err.textContent = friendlyAuthError(e2.code);
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Bazaro</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app-header"></div>
+<main>
+  <div class="auth-shell">
+    <h1>Welcome back</h1>
+    <p class="muted">Log in to view your orders and wishlist.</p>
+    <form id="login-form" novalidate>
+      <div class="field"><label for="email">Email</label><input id="email" type="email" required></div>
+      <div class="field" style="margin-top:10px;"><label for="password">Password</label><input id="password" type="password" required></div>
+      <div class="field-error" id="form-error" style="margin-top:6px;"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:14px;" type="submit">Log in</button>
+      <button class="btn btn-ghost btn-block" type="button" id="forgot-btn" style="margin-top:6px;font-size:.82rem;">Forgot password?</button>
+    </form>
+    <div class="auth-switch">Don't have an account? <a href="register.html">Sign up</a></div>
+  </div>
+</main>
+<div id="app-footer"></div>
+<div id="toast-host"></div>
+<script type="module">
+  import { mountHeader, mountFooter } from "./js/layout.js";
+  import { loginUser, resetPassword, friendlyAuthError } from "./js/auth.js";
+  import { toast } from "./js/utils.js";
+  mountHeader(); mountFooter();
+
+  const params = new URLSearchParams(location.search);
+  document.getElementById("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const err = document.getElementById("form-error");
+    err.textContent = "";
+    try {
+      await loginUser(email, password);
+      toast("Logged in.");
+      window.location.href = params.get("next") || "account.html";
+    } catch (e2) {
+      err.textContent = friendlyAuthError(e2.code);
+    }
+  });
+
+  document.getElementById("forgot-btn").addEventListener("click", async () => {
+    const email = document.getElementById("email").value.trim();
+    if (!email) { document.getElementById("form-error").textContent = "Enter your email above first."; return; }
+    try { await resetPassword(email); toast("Password reset email sent."); }
+    catch (e) { document.getElementById("form-error").textContent = friendlyAuthError(e.code); }
+  });
+</script>
+</body>
+</html>

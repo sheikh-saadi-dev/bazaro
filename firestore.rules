@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Products: public can read published products, only admins can write.
+    match /products/{productId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Categories: public can read active categories, only admins can write.
+    match /categories/{categoryId} {
+      allow read: if resource.data.active == true || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Sliders: public can read active sliders, only admins can write.
+    match /sliders/{sliderId} {
+      allow read: if resource.data.active == true || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Settings + payment methods: public read (needed at checkout), admin write.
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /paymentMethods/{methodId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Coupons: authenticated or guest checkout needs to validate a code by reading it;
+    // allow read so checkout can look up a coupon by code, but never allow client writes
+    // except by admin (usedCount increments should ideally move to a Cloud Function).
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow update: if isAdmin() || (isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['usedCount']));
+      allow create, delete: if isAdmin();
+    }
+
+    // Orders: customers can create their own order and read only their own orders.
+    // Only admins can update status or delete.
+    match /orders/{orderId} {
+      allow create: if true; // guest checkout allowed; userId is set to null or the caller's uid
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+
+    // Users: a user can read/update their own profile (but never their own role/status).
+    // Admins can read/update/delete any user document.
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if isAdmin() ||
+        (isOwner(userId) && request.resource.data.role == resource.data.role && request.resource.data.status == resource.data.status);
+      allow delete: if isAdmin();
+    }
+
+    // Carts / wishlists: private to each user.
+    match /carts/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+    match /wishlists/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+  }
+}

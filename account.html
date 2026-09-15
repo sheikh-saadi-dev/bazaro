@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Account — Bazaro</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .acc-grid { display: grid; grid-template-columns: 200px 1fr; gap: 24px; }
+  @media (max-width: 780px) { .acc-grid { grid-template-columns: 1fr; } }
+  .acc-nav { display: flex; flex-direction: column; gap: 4px; }
+  .acc-nav button { text-align: left; padding: 10px 12px; border-radius: 8px; border: none; background: none; cursor: pointer; color: var(--ink-soft); font-weight: 500; }
+  .acc-nav button.active { background: var(--surface-2); color: var(--ink); }
+  .order-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div id="app-header"></div>
+<main>
+  <section class="section">
+    <div class="wrap acc-grid">
+      <nav class="acc-nav">
+        <button class="active" data-tab="orders">Order history</button>
+        <button data-tab="wishlist">Wishlist</button>
+        <button data-tab="profile">Profile</button>
+        <button id="logout-btn" style="color:var(--danger);margin-top:10px;">Log out</button>
+      </nav>
+      <div id="acc-content"><div class="skel" style="height:200px"></div></div>
+    </div>
+  </section>
+</main>
+<div id="app-footer"></div>
+<div id="toast-host"></div>
+<script type="module">
+  import { mountHeader, mountFooter } from "./js/layout.js";
+  import { requireAuth, logoutUser, auth } from "./js/auth.js";
+  import { db, collection, query, where, getDocs, doc, getDoc, orderBy } from "./js/firebase.js";
+  import { bdt, escapeHtml, getLocalWishlist, toast } from "./js/utils.js";
+  import { fetchPublishedProducts, productCard, wireProductCardEvents } from "./js/products.js";
+
+  mountHeader("account");
+  mountFooter();
+
+  const content = document.getElementById("acc-content");
+  document.getElementById("logout-btn").addEventListener("click", async () => { await logoutUser(); window.location.href = "index.html"; });
+  document.querySelectorAll(".acc-nav button[data-tab]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".acc-nav button[data-tab]").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      render(btn.dataset.tab);
+    });
+  });
+
+  let user, profile;
+
+  async function render(tab) {
+    if (tab === "orders") {
+      content.innerHTML = `<div class="skel" style="height:200px"></div>`;
+      let orders = [];
+      try {
+        const snap = await getDocs(query(collection(db, "orders"), where("userId", "==", user.uid)));
+        orders = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      } catch (e) {}
+      content.innerHTML = orders.length ? orders.map(o => `
+        <div class="order-card">
+          <div>
+            <strong>#${o.id.slice(0, 8)}</strong>
+            <div class="muted" style="font-size:.82rem;">${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString() : ""} · ${o.items?.length || 0} item(s)</div>
+          </div>
+          <div style="font-weight:700;">${bdt(o.total)}</div>
+          <span class="status-badge status-${o.status}">${o.status[0].toUpperCase() + o.status.slice(1)}</span>
+        </div>
+      `).join("") : `<div class="empty-state"><p>You haven't placed any orders yet.</p><a class="btn btn-primary" href="products.html">Start shopping</a></div>`;
+    }
+
+    if (tab === "wishlist") {
+      content.innerHTML = `<div class="skel" style="height:200px"></div>`;
+      const ids = getLocalWishlist();
+      if (!ids.length) { content.innerHTML = `<div class="empty-state"><p>No products in your wishlist.</p></div>`; return; }
+      const all = await fetchPublishedProducts();
+      const items = all.filter(p => ids.includes(p.id));
+      content.innerHTML = `<div class="grid-products">${items.map(productCard).join("")}</div>`;
+      wireProductCardEvents(content, items);
+    }
+
+    if (tab === "profile") {
+      content.innerHTML = `
+        <div class="summary-card" style="max-width:420px;">
+          <div class="field"><label>Name</label><input id="p-name" value="${escapeHtml(profile?.name || "")}"></div>
+          <div class="field" style="margin-top:10px;"><label>Phone</label><input id="p-phone" value="${escapeHtml(profile?.phone || "")}"></div>
+          <div class="field" style="margin-top:10px;"><label>Address</label><textarea id="p-address" rows="2">${escapeHtml(profile?.address || "")}</textarea></div>
+          <div class="muted" style="margin-top:8px;font-size:.82rem;">Email: ${escapeHtml(profile?.email || user.email)}</div>
+          <button class="btn btn-primary" id="save-profile-btn" style="margin-top:14px;">Save changes</button>
+        </div>`;
+      document.getElementById("save-profile-btn").addEventListener("click", async () => {
+        const { updateDoc } = await import("./js/firebase.js");
+        await updateDoc(doc(db, "users", user.uid), {
+          name: document.getElementById("p-name").value.trim(),
+          phone: document.getElementById("p-phone").value.trim(),
+          address: document.getElementById("p-address").value.trim()
+        });
+        toast("Profile updated.");
+      });
+    }
+  }
+
+  async function init() {
+    user = await requireAuth("login.html");
+    const snap = await getDoc(doc(db, "users", user.uid));
+    profile = snap.exists() ? snap.data() : {};
+    render("orders");
+  }
+  init();
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact — Bazaro</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app-header"></div>
+<main><section class="section"><div class="wrap" style="max-width:480px;">
+  <h1 class="display" style="font-size:1.7rem">Contact us</h1>
+  <p id="contact-details" class="muted">Loading contact details…</p>
+</div></section></main>
+<div id="app-footer"></div>
+<script type="module">
+  import { mountHeader, mountFooter } from "./js/layout.js";
+  import { db, doc, getDoc } from "./js/firebase.js";
+  mountHeader(); mountFooter();
+  (async () => {
+    const el = document.getElementById("contact-details");
+    try {
+      const snap = await getDoc(doc(db, "settings", "store"));
+      const s = snap.exists() ? snap.data() : {};
+      el.innerHTML = `Phone: ${s.phone || "—"}<br>Email: ${s.email || "—"}<br>Address: ${s.address || "—"}`;
+    } catch (e) { el.textContent = "Couldn't load contact details right now."; }
+  })();
+</script>
+</body>
+</html>
