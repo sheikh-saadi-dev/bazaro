@@ -5,16 +5,29 @@ let currentUser = null;
 let ready = false;
 const readyWaiters = [];
 
+const MERGE_FLAG_KEY = "bazaro_cart_merge_done_uid";
+
 onAuthStateChanged(auth, async (user) => {
-  const guestCart = getLocalCart();
   currentUser = user;
   if (user) {
     const ref = doc(db, "carts", user.uid);
     const snap = await getDoc(ref);
     const remoteItems = snap.exists() ? (snap.data().items || []) : [];
-    const merged = mergeCarts(remoteItems, guestCart);
-    setLocalCart(merged);
-    await setDoc(ref, { items: merged, updatedAt: new Date().toISOString() }, { merge: true });
+    const alreadyMerged = localStorage.getItem(MERGE_FLAG_KEY) === user.uid;
+
+    if (!alreadyMerged) {
+      // First time this device sees this user logged in — merge any guest cart in, once.
+      const guestCart = getLocalCart();
+      const merged = mergeCarts(remoteItems, guestCart);
+      setLocalCart(merged);
+      await setDoc(ref, { items: merged, updatedAt: new Date().toISOString() }, { merge: true });
+      localStorage.setItem(MERGE_FLAG_KEY, user.uid);
+    } else {
+      // Already synced before — just trust Firestore, don't re-merge/re-sum.
+      setLocalCart(remoteItems);
+    }
+  } else {
+    localStorage.removeItem(MERGE_FLAG_KEY);
   }
   ready = true;
   readyWaiters.splice(0).forEach(fn => fn());
