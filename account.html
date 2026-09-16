@@ -7,61 +7,35 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<div class="acc-topbar-mobile">
-  <button class="icon-btn" id="acc-hamburger" style="color:#fff;" aria-label="Open menu">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-  </button>
-  <strong>My Account</strong>
-  <span></span>
-</div>
-<div class="account-shell">
-  <aside class="acc-sidebar" id="acc-sidebar">
-    <div class="logo">Bazaro<span>.</span></div>
-    <button class="acc-nav-link active" data-tab="overview">Overview</button>
-    <button class="acc-nav-link" data-tab="orders">My Orders</button>
-    <button class="acc-nav-link" data-tab="wishlist">Wishlist</button>
-    <button class="acc-nav-link" data-tab="profile">Personal Information</button>
-    <button class="acc-nav-link" data-tab="security">Security</button>
-    <div class="acc-sidebar-bottom">
-      <div class="acc-dark-toggle">
-        <span>Dark Mode</span>
-        <input type="checkbox" id="acc-theme-toggle" style="width:36px;height:20px;">
-      </div>
-      <button class="acc-nav-link" id="acc-logout-btn" style="color:#F3A79A;">Log out</button>
+<div id="app-header"></div>
+<main>
+  <div class="wrap">
+    <h1 class="display" style="font-size:1.5rem;margin-top:8px;">My Account</h1>
+    <p class="muted" style="margin-top:-6px;">Manage your profile, orders, wishlist and more.</p>
+    <div class="account-shell">
+      <nav class="acc-sidebar" id="acc-sidebar">
+        <button class="acc-nav-link active" data-tab="overview">Overview</button>
+        <button class="acc-nav-link" data-tab="orders">My Orders</button>
+        <button class="acc-nav-link" data-tab="wishlist">Wishlist</button>
+        <button class="acc-nav-link" data-tab="profile">Personal Information</button>
+        <button class="acc-nav-link" data-tab="security">Security</button>
+      </nav>
+      <div id="acc-content"><div class="skel" style="height:300px"></div></div>
     </div>
-  </aside>
-
-  <main class="acc-main">
-    <div class="acc-page-head">
-      <div>
-        <h1>My Account</h1>
-        <p class="muted" style="margin:0;">Manage your profile, orders, wishlist and more.</p>
-      </div>
-    </div>
-    <div id="acc-content"><div class="skel" style="height:300px"></div></div>
-  </main>
-</div>
+  </div>
+</main>
+<div id="app-footer"></div>
 <div id="toast-host"></div>
 
 <script type="module">
-  import { initTheme, toggleTheme, currentTheme } from "./js/theme.js";
-  import { requireAuth, logoutUser } from "./js/auth.js";
+  import { mountHeader, mountFooter } from "./js/layout.js";
+  import { requireAuth, logoutUser, resetPassword } from "./js/auth.js";
   import { db, doc, getDoc, updateDoc, collection, query, where, getDocs } from "./js/firebase.js";
   import { bdt, escapeHtml, getLocalWishlist, toast } from "./js/utils.js";
   import { fetchPublishedProducts, productCard, wireProductCardEvents } from "./js/products.js";
-  import { resetPassword } from "./js/auth.js";
 
-  initTheme();
-  document.getElementById("acc-theme-toggle").checked = currentTheme() === "dark";
-  document.getElementById("acc-theme-toggle").addEventListener("change", toggleTheme);
-
-  const sidebar = document.getElementById("acc-sidebar");
-  document.getElementById("acc-hamburger").addEventListener("click", () => sidebar.classList.toggle("open"));
-
-  document.getElementById("acc-logout-btn").addEventListener("click", async () => {
-    await logoutUser();
-    window.location.href = "index.html";
-  });
+  mountHeader("account");
+  mountFooter();
 
   const content = document.getElementById("acc-content");
   document.querySelectorAll(".acc-nav-link[data-tab]").forEach(btn => {
@@ -90,11 +64,7 @@
     const wishCount = getLocalWishlist().length;
     const recent = orders.slice(0, 4);
 
-    const fields = [
-      ["Name", !!profile?.name],
-      ["Phone number", !!profile?.phone],
-      ["Address", !!profile?.address],
-    ];
+    const fields = [["Name", !!profile?.name], ["Phone number", !!profile?.phone], ["Address", !!profile?.address]];
     const donePct = Math.round((fields.filter(f => f[1]).length / fields.length) * 100);
 
     content.innerHTML = `
@@ -125,7 +95,6 @@
           <div class="acc-card-head"><h3>Recent Orders</h3><button class="action-link" id="view-all-orders" style="color:var(--primary);background:none;border:none;cursor:pointer;font-weight:600;">View all</button></div>
           ${recent.length ? recent.map(o => `
             <div class="acc-order-row">
-              <img src="${o.items?.[0] ? "" : ""}" onerror="this.style.display='none'" alt="">
               <div class="grow">
                 <strong>${escapeHtml(o.items?.[0]?.name || "Order")}${o.items?.length > 1 ? ` +${o.items.length - 1} more` : ""}</strong>
                 <span>#${o.id.slice(0, 8)} · ${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString() : ""}</span>
@@ -135,19 +104,17 @@
             </div>`).join("") : `<p class="muted">You haven't placed any orders yet.</p>`}
         </div>
 
-        <div>
-          <div class="acc-card">
-            <h3 style="font-size:1rem;">Profile Completion</h3>
-            <div style="display:flex;align-items:center;gap:16px;margin-top:10px;">
-              <div class="acc-progress-ring" style="background:conic-gradient(var(--primary) ${donePct * 3.6}deg, var(--surface-2) 0deg);">
-                <div style="background:var(--surface);width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.95rem;">${donePct}%</div>
-              </div>
-              <p class="muted" style="font-size:.82rem;margin:0;">Complete your profile for a better experience.</p>
+        <div class="acc-card">
+          <h3 style="font-size:1rem;">Profile Completion</h3>
+          <div style="display:flex;align-items:center;gap:16px;margin-top:10px;">
+            <div class="acc-progress-ring" style="background:conic-gradient(var(--primary) ${donePct * 3.6}deg, var(--surface-2) 0deg);">
+              <div style="background:var(--surface);width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-family:'Fraunces',serif;font-weight:700;">${donePct}%</div>
             </div>
-            <ul class="acc-checklist">
-              ${fields.map(([label, done]) => `<li class="${done ? "done" : ""}"><span class="acc-check-dot ${done ? "done" : ""}">${done ? "✓" : ""}</span>${label}</li>`).join("")}
-            </ul>
+            <p class="muted" style="font-size:.82rem;margin:0;">Complete your profile for a better experience.</p>
           </div>
+          <ul class="acc-checklist">
+            ${fields.map(([label, done]) => `<li class="${done ? "done" : ""}"><span class="acc-check-dot ${done ? "done" : ""}">${done ? "✓" : ""}</span>${label}</li>`).join("")}
+          </ul>
         </div>
       </div>
 
@@ -165,8 +132,9 @@
     `;
 
     document.getElementById("view-all-orders").addEventListener("click", () => document.querySelector('[data-tab="orders"]').click());
-    document.getElementById("overview-logout-btn").addEventListener("click", () => document.getElementById("acc-logout-btn").click());
+    document.getElementById("overview-logout-btn").addEventListener("click", async () => { await logoutUser(); window.location.href = "index.html"; });
     content.querySelectorAll("[data-goto]").forEach(el => el.addEventListener("click", () => document.querySelector(`[data-tab="${el.dataset.goto}"]`).click()));
+    content.querySelectorAll("[data-href]").forEach(el => el.addEventListener("click", () => window.location.href = el.dataset.href));
   }
 
   async function render(tab) {
@@ -175,10 +143,7 @@
     if (tab === "orders") {
       content.innerHTML = `<div class="acc-card">${orders.length ? orders.map(o => `
         <div class="acc-order-row">
-          <div class="grow">
-            <strong>#${o.id.slice(0, 8)}</strong>
-            <span>${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString() : ""} · ${o.items?.length || 0} item(s)</span>
-          </div>
+          <div class="grow"><strong>#${o.id.slice(0, 8)}</strong><span>${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString() : ""} · ${o.items?.length || 0} item(s)</span></div>
           <span class="status-badge status-${o.status}">${o.status[0].toUpperCase() + o.status.slice(1)}</span>
           <span class="acc-order-price">${bdt(o.total)}</span>
         </div>`).join("") : `<p class="muted">You haven't placed any orders yet.</p>`}</div>`;
