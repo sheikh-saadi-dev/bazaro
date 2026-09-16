@@ -5,78 +5,189 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Account — Bazaro</title>
 <link rel="stylesheet" href="css/style.css">
-<style>
-  .acc-grid { display: grid; grid-template-columns: 200px 1fr; gap: 24px; }
-  @media (max-width: 780px) { .acc-grid { grid-template-columns: 1fr; } }
-  .acc-nav { display: flex; flex-direction: column; gap: 4px; }
-  .acc-nav button { text-align: left; padding: 10px 12px; border-radius: 8px; border: none; background: none; cursor: pointer; color: var(--ink-soft); font-weight: 500; }
-  .acc-nav button.active { background: var(--surface-2); color: var(--ink); }
-  .order-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
-</style>
 </head>
 <body>
-<div id="app-header"></div>
-<main>
-  <section class="section">
-    <div class="wrap acc-grid">
-      <nav class="acc-nav">
-        <button class="active" data-tab="orders">Order history</button>
-        <button data-tab="wishlist">Wishlist</button>
-        <button data-tab="profile">Profile</button>
-        <button id="logout-btn" style="color:var(--danger);margin-top:10px;">Log out</button>
-      </nav>
-      <div id="acc-content"><div class="skel" style="height:200px"></div></div>
+<div class="acc-topbar-mobile">
+  <button class="icon-btn" id="acc-hamburger" style="color:#fff;" aria-label="Open menu">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+  </button>
+  <strong>My Account</strong>
+  <span></span>
+</div>
+<div class="account-shell">
+  <aside class="acc-sidebar" id="acc-sidebar">
+    <div class="logo">Bazaro<span>.</span></div>
+    <button class="acc-nav-link active" data-tab="overview">Overview</button>
+    <button class="acc-nav-link" data-tab="orders">My Orders</button>
+    <button class="acc-nav-link" data-tab="wishlist">Wishlist</button>
+    <button class="acc-nav-link" data-tab="profile">Personal Information</button>
+    <button class="acc-nav-link" data-tab="security">Security</button>
+    <div class="acc-sidebar-bottom">
+      <div class="acc-dark-toggle">
+        <span>Dark Mode</span>
+        <input type="checkbox" id="acc-theme-toggle" style="width:36px;height:20px;">
+      </div>
+      <button class="acc-nav-link" id="acc-logout-btn" style="color:#F3A79A;">Log out</button>
     </div>
-  </section>
-</main>
-<div id="app-footer"></div>
+  </aside>
+
+  <main class="acc-main">
+    <div class="acc-page-head">
+      <div>
+        <h1>My Account</h1>
+        <p class="muted" style="margin:0;">Manage your profile, orders, wishlist and more.</p>
+      </div>
+    </div>
+    <div id="acc-content"><div class="skel" style="height:300px"></div></div>
+  </main>
+</div>
 <div id="toast-host"></div>
+
 <script type="module">
-  import { mountHeader, mountFooter } from "./js/layout.js";
-  import { requireAuth, logoutUser, auth } from "./js/auth.js";
-  import { db, collection, query, where, getDocs, doc, getDoc, orderBy } from "./js/firebase.js";
+  import { initTheme, toggleTheme, currentTheme } from "./js/theme.js";
+  import { requireAuth, logoutUser } from "./js/auth.js";
+  import { db, doc, getDoc, updateDoc, collection, query, where, getDocs } from "./js/firebase.js";
   import { bdt, escapeHtml, getLocalWishlist, toast } from "./js/utils.js";
   import { fetchPublishedProducts, productCard, wireProductCardEvents } from "./js/products.js";
+  import { resetPassword } from "./js/auth.js";
 
-  mountHeader("account");
-  mountFooter();
+  initTheme();
+  document.getElementById("acc-theme-toggle").checked = currentTheme() === "dark";
+  document.getElementById("acc-theme-toggle").addEventListener("change", toggleTheme);
+
+  const sidebar = document.getElementById("acc-sidebar");
+  document.getElementById("acc-hamburger").addEventListener("click", () => sidebar.classList.toggle("open"));
+
+  document.getElementById("acc-logout-btn").addEventListener("click", async () => {
+    await logoutUser();
+    window.location.href = "index.html";
+  });
 
   const content = document.getElementById("acc-content");
-  document.getElementById("logout-btn").addEventListener("click", async () => { await logoutUser(); window.location.href = "index.html"; });
-  document.querySelectorAll(".acc-nav button[data-tab]").forEach(btn => {
+  document.querySelectorAll(".acc-nav-link[data-tab]").forEach(btn => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".acc-nav button[data-tab]").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".acc-nav-link[data-tab]").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       render(btn.dataset.tab);
     });
   });
 
-  let user, profile;
+  let user, profile, orders = [];
+
+  function initials(name) {
+    return (name || "?").trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase()).join("");
+  }
+
+  async function loadOrders() {
+    const snap = await getDocs(query(collection(db, "orders"), where("userId", "==", user.uid)));
+    orders = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  }
+
+  function renderOverview() {
+    const total = orders.length;
+    const pending = orders.filter(o => o.status === "pending").length;
+    const delivered = orders.filter(o => o.status === "delivered").length;
+    const wishCount = getLocalWishlist().length;
+    const recent = orders.slice(0, 4);
+
+    const fields = [
+      ["Name", !!profile?.name],
+      ["Phone number", !!profile?.phone],
+      ["Address", !!profile?.address],
+    ];
+    const donePct = Math.round((fields.filter(f => f[1]).length / fields.length) * 100);
+
+    content.innerHTML = `
+      <div class="acc-banner">
+        <div class="acc-banner-left">
+          <div class="acc-avatar">${initials(profile?.name)}</div>
+          <div>
+            <div class="acc-banner-name">${escapeHtml(profile?.name || "Customer")}</div>
+            <div class="acc-banner-meta">${escapeHtml(profile?.email || user.email)}</div>
+            <div class="acc-banner-meta">Member since ${profile?.createdAt?.toDate ? profile.createdAt.toDate().toLocaleDateString(undefined, { month: "short", year: "numeric" }) : "—"}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="acc-stat-grid">
+        <div class="acc-stat-card"><div><div class="acc-stat-value">${total}</div><div class="acc-stat-label">Total Orders</div></div>
+          <div class="acc-stat-icon" style="background:rgba(44,110,73,.12);color:var(--primary);">🛍️</div></div>
+        <div class="acc-stat-card"><div><div class="acc-stat-value">${pending}</div><div class="acc-stat-label">Pending Orders</div></div>
+          <div class="acc-stat-icon" style="background:rgba(211,167,44,.15);color:#8a6a10;">⏱️</div></div>
+        <div class="acc-stat-card"><div><div class="acc-stat-value">${wishCount}</div><div class="acc-stat-label">Wishlist Items</div></div>
+          <div class="acc-stat-icon" style="background:rgba(179,64,42,.12);color:var(--danger);">♥</div></div>
+        <div class="acc-stat-card"><div><div class="acc-stat-value">${delivered}</div><div class="acc-stat-label">Delivered</div></div>
+          <div class="acc-stat-icon" style="background:rgba(44,110,73,.12);color:var(--primary);">✓</div></div>
+      </div>
+
+      <div class="acc-content-grid">
+        <div class="acc-card">
+          <div class="acc-card-head"><h3>Recent Orders</h3><button class="action-link" id="view-all-orders" style="color:var(--primary);background:none;border:none;cursor:pointer;font-weight:600;">View all</button></div>
+          ${recent.length ? recent.map(o => `
+            <div class="acc-order-row">
+              <img src="${o.items?.[0] ? "" : ""}" onerror="this.style.display='none'" alt="">
+              <div class="grow">
+                <strong>${escapeHtml(o.items?.[0]?.name || "Order")}${o.items?.length > 1 ? ` +${o.items.length - 1} more` : ""}</strong>
+                <span>#${o.id.slice(0, 8)} · ${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString() : ""}</span>
+              </div>
+              <span class="status-badge status-${o.status}">${o.status[0].toUpperCase() + o.status.slice(1)}</span>
+              <span class="acc-order-price">${bdt(o.total)}</span>
+            </div>`).join("") : `<p class="muted">You haven't placed any orders yet.</p>`}
+        </div>
+
+        <div>
+          <div class="acc-card">
+            <h3 style="font-size:1rem;">Profile Completion</h3>
+            <div style="display:flex;align-items:center;gap:16px;margin-top:10px;">
+              <div class="acc-progress-ring" style="background:conic-gradient(var(--primary) ${donePct * 3.6}deg, var(--surface-2) 0deg);">
+                <div style="background:var(--surface);width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.95rem;">${donePct}%</div>
+              </div>
+              <p class="muted" style="font-size:.82rem;margin:0;">Complete your profile for a better experience.</p>
+            </div>
+            <ul class="acc-checklist">
+              ${fields.map(([label, done]) => `<li class="${done ? "done" : ""}"><span class="acc-check-dot ${done ? "done" : ""}">${done ? "✓" : ""}</span>${label}</li>`).join("")}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="acc-quick-grid">
+        <div class="acc-quick-card" data-goto="profile"><div class="acc-stat-icon" style="background:rgba(44,110,73,.12);color:var(--primary);">📍</div><div><strong>Address</strong><span>Manage delivery address</span></div></div>
+        <div class="acc-quick-card" data-goto="wishlist"><div class="acc-stat-icon" style="background:rgba(179,64,42,.12);color:var(--danger);">♥</div><div><strong>Wishlist</strong><span>${wishCount} saved item(s)</span></div></div>
+        <div class="acc-quick-card" data-goto="security"><div class="acc-stat-icon" style="background:rgba(211,167,44,.15);color:#8a6a10;">🔒</div><div><strong>Security</strong><span>Password &amp; login</span></div></div>
+        <div class="acc-quick-card" data-href="contact.html"><div class="acc-stat-icon" style="background:rgba(44,98,179,.12);color:#2c62b3;">💬</div><div><strong>Support</strong><span>Get help fast</span></div></div>
+      </div>
+
+      <div class="acc-footer-bar">
+        <span class="muted">Thank you for shopping with Bazaro!</span>
+        <button class="btn btn-outline" id="overview-logout-btn">Log out</button>
+      </div>
+    `;
+
+    document.getElementById("view-all-orders").addEventListener("click", () => document.querySelector('[data-tab="orders"]').click());
+    document.getElementById("overview-logout-btn").addEventListener("click", () => document.getElementById("acc-logout-btn").click());
+    content.querySelectorAll("[data-goto]").forEach(el => el.addEventListener("click", () => document.querySelector(`[data-tab="${el.dataset.goto}"]`).click()));
+  }
 
   async function render(tab) {
+    if (tab === "overview") return renderOverview();
+
     if (tab === "orders") {
-      content.innerHTML = `<div class="skel" style="height:200px"></div>`;
-      let orders = [];
-      try {
-        const snap = await getDocs(query(collection(db, "orders"), where("userId", "==", user.uid)));
-        orders = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-      } catch (e) {}
-      content.innerHTML = orders.length ? orders.map(o => `
-        <div class="order-card">
-          <div>
+      content.innerHTML = `<div class="acc-card">${orders.length ? orders.map(o => `
+        <div class="acc-order-row">
+          <div class="grow">
             <strong>#${o.id.slice(0, 8)}</strong>
-            <div class="muted" style="font-size:.82rem;">${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString() : ""} · ${o.items?.length || 0} item(s)</div>
+            <span>${o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString() : ""} · ${o.items?.length || 0} item(s)</span>
           </div>
-          <div style="font-weight:700;">${bdt(o.total)}</div>
           <span class="status-badge status-${o.status}">${o.status[0].toUpperCase() + o.status.slice(1)}</span>
-        </div>
-      `).join("") : `<div class="empty-state"><p>You haven't placed any orders yet.</p><a class="btn btn-primary" href="products.html">Start shopping</a></div>`;
+          <span class="acc-order-price">${bdt(o.total)}</span>
+        </div>`).join("") : `<p class="muted">You haven't placed any orders yet.</p>`}</div>`;
     }
 
     if (tab === "wishlist") {
       content.innerHTML = `<div class="skel" style="height:200px"></div>`;
       const ids = getLocalWishlist();
-      if (!ids.length) { content.innerHTML = `<div class="empty-state"><p>No products in your wishlist.</p></div>`; return; }
+      if (!ids.length) { content.innerHTML = `<div class="acc-card"><p class="muted">No products in your wishlist.</p></div>`; return; }
       const all = await fetchPublishedProducts();
       const items = all.filter(p => ids.includes(p.id));
       content.innerHTML = `<div class="grid-products">${items.map(productCard).join("")}</div>`;
@@ -85,7 +196,7 @@
 
     if (tab === "profile") {
       content.innerHTML = `
-        <div class="summary-card" style="max-width:420px;">
+        <div class="acc-card" style="max-width:440px;">
           <div class="field"><label>Name</label><input id="p-name" value="${escapeHtml(profile?.name || "")}"></div>
           <div class="field" style="margin-top:10px;"><label>Phone</label><input id="p-phone" value="${escapeHtml(profile?.phone || "")}"></div>
           <div class="field" style="margin-top:10px;"><label>Address</label><textarea id="p-address" rows="2">${escapeHtml(profile?.address || "")}</textarea></div>
@@ -93,13 +204,27 @@
           <button class="btn btn-primary" id="save-profile-btn" style="margin-top:14px;">Save changes</button>
         </div>`;
       document.getElementById("save-profile-btn").addEventListener("click", async () => {
-        const { updateDoc } = await import("./js/firebase.js");
-        await updateDoc(doc(db, "users", user.uid), {
+        const data = {
           name: document.getElementById("p-name").value.trim(),
           phone: document.getElementById("p-phone").value.trim(),
           address: document.getElementById("p-address").value.trim()
-        });
+        };
+        await updateDoc(doc(db, "users", user.uid), data);
+        profile = { ...profile, ...data };
         toast("Profile updated.");
+      });
+    }
+
+    if (tab === "security") {
+      content.innerHTML = `
+        <div class="acc-card" style="max-width:440px;">
+          <h3 style="font-size:1rem;">Password</h3>
+          <p class="muted" style="font-size:.86rem;">We'll email you a secure link to reset your password.</p>
+          <button class="btn btn-primary" id="send-reset-btn">Send password reset email</button>
+        </div>`;
+      document.getElementById("send-reset-btn").addEventListener("click", async () => {
+        try { await resetPassword(user.email); toast("Password reset email sent."); }
+        catch (e) { toast("Couldn't send reset email.", "err"); }
       });
     }
   }
@@ -108,7 +233,8 @@
     user = await requireAuth("login.html");
     const snap = await getDoc(doc(db, "users", user.uid));
     profile = snap.exists() ? snap.data() : {};
-    render("orders");
+    await loadOrders();
+    render("overview");
   }
   init();
 </script>
