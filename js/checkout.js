@@ -2,8 +2,8 @@ import { mountHeader, mountFooter } from "./layout.js";
 import {
   db, auth, collection, getDocs, getDoc, doc, query, where, addDoc, updateDoc, serverTimestamp
 } from "./firebase.js";
-import { getLocalCart, clearCart, bdt, escapeHtml, toast } from "./utils.js";
-import { cartTotals } from "./cart.js";
+import { getLocalCart, bdt, escapeHtml, toast } from "./utils.js";
+import { cartTotals, clearCart } from "./cart.js";
 
 mountHeader();
 mountFooter();
