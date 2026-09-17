@@ -89,6 +89,7 @@ export function mountHeader(activePage = "") {
   onAuthStateChanged(auth, (user) => {
     if (!user) document.querySelectorAll('a[href="account.html"]').forEach(a => a.setAttribute("href", "login.html"));
   });
+  mountMobileBottomNav(activePage);
 }
 
 function refreshCounts() {
