@@ -1,7 +1,7 @@
-import { mountHeader, mountFooter } from "./layout.js";
 import {
-  db, auth, collection, getDocs, getDoc, doc, query, where, addDoc, updateDoc, serverTimestamp
+  db, auth, collection, getDocs, getDoc, doc, query, where, addDoc, updateDoc, serverTimestamp, increment
 } from "./firebase.js";
+import { mountHeader, mountFooter } from "./layout.js";
 import { getLocalCart, bdt, escapeHtml, toast } from "./utils.js";
 import { cartTotals, clearCart } from "./cart.js";
 
@@ -217,7 +217,10 @@ async function placeOrder() {
       const pRef = doc(db, "products", item.productId);
       const pSnap = await getDoc(pRef);
       if (pSnap.exists()) {
-        await updateDoc(pRef, { stock: Math.max(0, (pSnap.data().stock || 0) - item.qty) });
+        await updateDoc(pRef, {
+          stock: Math.max(0, (pSnap.data().stock || 0) - item.qty),
+          salesCount: increment(item.qty)
+        });
       }
     }
     if (appliedCoupon) {
