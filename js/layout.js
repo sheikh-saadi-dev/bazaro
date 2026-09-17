@@ -17,7 +17,15 @@ function iconSun() {
 function iconMoon() {
   return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.5 14.5a8.5 8.5 0 1 1-9-11 6.7 6.7 0 0 0 9 11Z"/></svg>`;
 }
-
+function iconHome() {
+  return `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M3.5 10.5 12 3.5l8.5 7v9a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1Z"/></svg>`;
+}
+function iconMenu() {
+  return `<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>`;
+}
+function iconChat() {
+  return `<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 1 1 3.2 6.4L4 20l1.3-3.4A7.96 7.96 0 0 1 4 12Z"/></svg>`;
+}
 export function mountHeader(activePage = "") {
   initTheme();
   const host = document.getElementById("app-header");
