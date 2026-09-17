@@ -418,3 +418,18 @@ button { font-family: inherit; }
 
 .payment-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .payment-pill { font-size: .72rem; font-weight: 600; padding: 4px 10px; border-radius: 6px; background: var(--surface); border: 1px solid var(--border); color: var(--ink-soft); }
+
+/* ===== Mobile bottom nav ===== */
+.mobile-bottom-nav { display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; background: var(--surface); border-top: 1px solid var(--border); padding: 8px 6px calc(8px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 14px rgba(0,0,0,.06); }
+@media (max-width: 780px) {
+  .mobile-bottom-nav { display: flex; align-items: flex-end; justify-content: space-around; }
+  body { padding-bottom: 74px; }
+}
+.mbn-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: .66rem; font-weight: 500; color: var(--ink-soft); background: none; border: none; cursor: pointer; flex: 1; position: relative; padding: 4px 0; }
+.mbn-item.active, .mbn-item:hover { color: var(--ink); }
+.mbn-item.active { color: var(--primary); }
+.mbn-badge { position: absolute; top: -2px; right: 26%; background: var(--accent); color: #171B16; font-size: .6rem; font-weight: 700; min-width: 14px; height: 14px; border-radius: 999px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+.mbn-home { flex: 1; display: flex; flex-direction: column; align-items: center; }
+.mbn-home-btn { width: 54px; height: 54px; border-radius: 50%; background: var(--primary); color: var(--primary-ink); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); margin-top: -28px; border: 4px solid var(--bg); }
+.mbn-home span { font-size: .66rem; margin-top: 3px; font-weight: 600; color: var(--ink-soft); }
+.mbn-home.active span { color: var(--primary); }
