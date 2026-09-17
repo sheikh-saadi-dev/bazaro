@@ -158,5 +158,46 @@ async function loadFooterPayments() {
     row.innerHTML = names.map(n => `<span class="payment-pill">${n}</span>`).join("");
   } catch (e) {}
 }
+async function mountMobileBottomNav(activePage) {
+  if (document.getElementById("mobile-bottom-nav")) return; // avoid duplicates
+  const s = await getStoreSettings();
+  const rawPhone = (s.whatsapp || s.phone || "").replace(/[^\d]/g, "");
+  const waNumber = rawPhone.startsWith("0") ? "880" + rawPhone.slice(1) : rawPhone;
 
+  const nav = document.createElement("div");
+  nav.className = "mobile-bottom-nav";
+  nav.id = "mobile-bottom-nav";
+  nav.innerHTML = `
+    <button class="mbn-item" id="mbn-category">${iconMenu()}<span>Category</span></button>
+    <a class="mbn-item" href="${waNumber ? `https://wa.me/${waNumber}` : "contact.html"}" target="${waNumber ? "_blank" : "_self"}" rel="noopener">${iconChat()}<span>WhatsApp</span></a>
+    <a class="mbn-item mbn-home ${activePage === "home" ? "active" : ""}" href="index.html">
+      <span class="mbn-home-btn">${iconHome()}</span><span>Home</span>
+    </a>
+    <a class="mbn-item" href="cart.html" id="mbn-cart">${iconCart()}<span id="mbn-cart-label">Cart (0)</span></a>
+    <a class="mbn-item" href="account.html" id="mbn-account">${iconUser()}<span>Login</span></a>
+  `;
+  document.body.appendChild(nav);
+
+  document.getElementById("mbn-category").addEventListener("click", () => {
+    document.getElementById("hamburger-btn")?.click();
+  });
+
+  function refreshMbnCart() {
+    const qty = getLocalCart().reduce((sum, i) => sum + i.qty, 0);
+    document.getElementById("mbn-cart-label").textContent = `Cart (${qty})`;
+  }
+  refreshMbnCart();
+  window.addEventListener("cart:changed", refreshMbnCart);
+
+  onAuthStateChanged(auth, (user) => {
+    const acc = document.getElementById("mbn-account");
+    if (user) {
+      acc.setAttribute("href", "account.html");
+      acc.querySelector("span").textContent = "Account";
+    } else {
+      acc.setAttribute("href", "login.html");
+      acc.querySelector("span").textContent = "Login";
+    }
+  });
+}
 export { signOut, auth };
