@@ -161,7 +161,12 @@ async function loadFooterPayments() {
 }
 async function mountMobileBottomNav(activePage) {
   if (document.getElementById("mobile-bottom-nav")) return; // avoid duplicates
-  const s = await getStoreSettings();
+
+  let s = {};
+  try {
+    const snap = await getDoc(doc(db, "settings", "store"));
+    if (snap.exists()) s = snap.data();
+  } catch (e) {}
   const rawPhone = (s.whatsapp || s.phone || "").replace(/[^\d]/g, "");
   const waNumber = rawPhone.startsWith("0") ? "880" + rawPhone.slice(1) : rawPhone;
 
