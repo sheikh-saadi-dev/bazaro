@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <title>Bazaro — Everyday goods, delivered</title>
 <meta name="description" content="Shop electronics, fashion, home and beauty essentials with cash on delivery across Bangladesh.">
 <link rel="stylesheet" href="css/style.css">
@@ -26,7 +29,7 @@
       <div class="section-head"><div><h2>Trending Now</h2><p class="muted" style="margin:0;">Top picks, loved by many.</p></div></div>
       <div class="rail-wrap">
         <button class="rail-arrow prev" id="trend-prev" aria-label="Previous">‹</button>
-        <div class="rail" id="top-products-rail">${Array(5).fill('<div class="skel skel-card"></div>').join("")}</div>
+        <div class="rail" id="top-products-rail"><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div></div>
         <button class="rail-arrow next" id="trend-next" aria-label="Next">›</button>
       </div>
     </div>
@@ -50,7 +53,7 @@
   <section class="section">
     <div class="wrap">
       <div class="section-head"><div><h2 id="curated-title">Picked For You</h2><p class="muted" style="margin:0;">Fresh picks from around the store.</p></div></div>
-      <div class="grid-products" id="curated-grid">${Array(5).fill('<div class="skel skel-card"></div>').join("")}</div>
+      <div class="grid-products" id="curated-grid"><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div></div>
     </div>
   </section>
 
@@ -70,7 +73,7 @@
   <section class="section">
     <div class="wrap">
       <div class="section-head"><div><h2>Best Sellers</h2><p class="muted" style="margin:0;">Customer favorites, always in style.</p></div></div>
-      <div class="grid-products" id="bestseller-grid">${Array(5).fill('<div class="skel skel-card"></div>').join("")}</div>
+      <div class="grid-products" id="bestseller-grid"><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div></div>
     </div>
   </section>
 
