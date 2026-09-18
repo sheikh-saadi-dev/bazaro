@@ -2,6 +2,57 @@ import { initTheme, toggleTheme } from "./theme.js";
 import { auth, onAuthStateChanged, signOut, db, doc, getDoc, collection, getDocs, query, where } from "./firebase.js";
 import { getLocalCart, getLocalWishlist, toast } from "./utils.js";
 
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function readCache(key) {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const { value, at } = JSON.parse(raw);
+    if (Date.now() - at > CACHE_TTL_MS) return null;
+    return value;
+  } catch (e) { return null; }
+}
+function writeCache(key, value) {
+  try { sessionStorage.setItem(key, JSON.stringify({ value, at: Date.now() })); } catch (e) {}
+}
+
+async function getStoreSettings() {
+  const cached = readCache("bazaro_cache_settings");
+  if (cached) return cached;
+  let s = {};
+  try {
+    const snap = await getDoc(doc(db, "settings", "store"));
+    if (snap.exists()) s = snap.data();
+  } catch (e) {}
+  writeCache("bazaro_cache_settings", s);
+  return s;
+}
+
+async function getActiveCategories() {
+  const cached = readCache("bazaro_cache_categories");
+  if (cached) return cached;
+  let list = [];
+  try {
+    const snap = await getDocs(query(collection(db, "categories"), where("active", "==", true)));
+    list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {}
+  writeCache("bazaro_cache_categories", list);
+  return list;
+}
+
+async function getActivePaymentMethods() {
+  const cached = readCache("bazaro_cache_payments");
+  if (cached) return cached;
+  let list = [];
+  try {
+    const snap = await getDocs(query(collection(db, "paymentMethods"), where("active", "==", true)));
+    list = snap.docs.map(d => d.data());
+  } catch (e) {}
+  writeCache("bazaro_cache_payments", list);
+  return list;
+}
+
 function iconHeart(filled = false) {
   return `<svg viewBox="0 0 24 24" width="20" height="20" fill="${filled ? "currentColor" : "none"}" stroke="currentColor" stroke-width="1.8"><path d="M12.1 20.6 3.9 12.9C1.4 10.5 1.7 6.4 4.6 4.5c2.2-1.5 5-1 6.7 1l.7.8.7-.8c1.7-2 4.5-2.5 6.7-1 2.9 1.9 3.2 6 0.7 8.4l-8.2 7.7Z"/></svg>`;
 }
@@ -26,6 +77,7 @@ function iconMenu() {
 function iconChat() {
   return `<svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12a8 8 0 1 1 3.2 6.4L4 20l1.3-3.4A7.96 7.96 0 0 1 4 12Z"/></svg>`;
 }
+
 export function mountHeader(activePage = "") {
   initTheme();
   const host = document.getElementById("app-header");
@@ -46,9 +98,7 @@ export function mountHeader(activePage = "") {
           <a class="icon-wrap icon-btn" href="cart.html" aria-label="Wishlist" id="wish-icon">${iconHeart()}<span class="badge-count" id="wish-count" hidden>0</span></a>
           <a class="icon-wrap icon-btn" href="cart.html" aria-label="Cart" id="cart-icon">${iconCart()}<span class="badge-count" id="cart-count" hidden>0</span></a>
           <a class="icon-btn" href="account.html" aria-label="Account" id="nl-account">${iconUser()}</a>
-          <button class="icon-btn hamburger" id="hamburger-btn" aria-label="Open menu" aria-expanded="false">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-          </button>
+          <button class="icon-btn hamburger" id="hamburger-btn" aria-label="Open menu" aria-expanded="false">${iconMenu()}</button>
         </div>
       </div>
     </header>
@@ -89,6 +139,8 @@ export function mountHeader(activePage = "") {
   onAuthStateChanged(auth, (user) => {
     if (!user) document.querySelectorAll('a[href="account.html"]').forEach(a => a.setAttribute("href", "login.html"));
   });
+
+  applyStoreBranding();
   mountMobileBottomNav(activePage);
 }
 
@@ -102,13 +154,57 @@ function refreshCounts() {
   if (wc) { wc.hidden = wish.length === 0; wc.textContent = wish.length; }
 }
 
-export function mountFooter(settings = {}) {
+async function applyStoreBranding() {
+  const s = await getStoreSettings();
+  if (!s.storeName) return;
+  document.querySelectorAll(".logo").forEach(el => { el.innerHTML = s.storeName + '<span>.</span>'; });
+  if (document.title.includes("Bazaro")) document.title = document.title.replace(/Bazaro/g, s.storeName);
+}
+
+async function mountMobileBottomNav(activePage) {
+  if (document.getElementById("mobile-bottom-nav")) return;
+  const s = await getStoreSettings();
+  const rawPhone = (s.whatsapp || s.phone || "").replace(/[^\d]/g, "");
+  const waNumber = rawPhone.startsWith("0") ? "880" + rawPhone.slice(1) : rawPhone;
+
+  const nav = document.createElement("div");
+  nav.className = "mobile-bottom-nav";
+  nav.id = "mobile-bottom-nav";
+  nav.innerHTML = `
+    <button class="mbn-item" id="mbn-category">${iconMenu()}<span>Category</span></button>
+    <a class="mbn-item" href="${waNumber ? `https://wa.me/${waNumber}` : "contact.html"}" target="${waNumber ? "_blank" : "_self"}" rel="noopener">${iconChat()}<span>WhatsApp</span></a>
+    <a class="mbn-item mbn-home ${activePage === "home" ? "active" : ""}" href="index.html">
+      <span class="mbn-home-btn">${iconHome()}</span><span>Home</span>
+    </a>
+    <a class="mbn-item" href="cart.html" id="mbn-cart">${iconCart()}<span id="mbn-cart-label">Cart (0)</span></a>
+    <a class="mbn-item" href="account.html" id="mbn-account">${iconUser()}<span>Login</span></a>
+  `;
+  document.body.appendChild(nav);
+
+  document.getElementById("mbn-category").addEventListener("click", () => { document.getElementById("hamburger-btn")?.click(); });
+
+  function refreshMbnCart() {
+    const qty = getLocalCart().reduce((sum, i) => sum + i.qty, 0);
+    document.getElementById("mbn-cart-label").textContent = `Cart (${qty})`;
+  }
+  refreshMbnCart();
+  window.addEventListener("cart:changed", refreshMbnCart);
+
+  onAuthStateChanged(auth, (user) => {
+    const acc = document.getElementById("mbn-account");
+    if (user) { acc.setAttribute("href", "account.html"); acc.querySelector("span").textContent = "Account"; }
+    else { acc.setAttribute("href", "login.html"); acc.querySelector("span").textContent = "Login"; }
+  });
+}
+
+export async function mountFooter(settings = {}) {
   const host = document.getElementById("app-footer");
   if (!host) return;
+  const stored = await getStoreSettings();
   const s = {
     storeName: "Bazaro", description: "Everyday goods, picked for quality and delivered across Bangladesh.",
     phone: "+880 1XXX-XXXXXX", email: "support@bazaro.example", address: "Dhaka, Bangladesh",
-    facebook: "#", instagram: "#", youtube: "#", ...settings
+    facebook: "#", instagram: "#", youtube: "#", ...stored, ...settings
   };
   host.innerHTML = `
     <footer class="site-footer">
@@ -143,67 +239,17 @@ export function mountFooter(settings = {}) {
 }
 
 async function loadFooterCategories() {
-  try {
-    const snap = await getDocs(query(collection(db, "categories"), where("active", "==", true)));
-    const list = document.getElementById("footer-categories");
-    if (!list) return;
-    list.innerHTML = snap.empty ? '<li class="muted">No categories yet</li>' : snap.docs.slice(0, 6).map(d => `<li><a href="products.html?category=${d.id}">${d.data().name}</a></li>`).join("");
-  } catch (e) {}
+  const list = document.getElementById("footer-categories");
+  if (!list) return;
+  const cats = await getActiveCategories();
+  list.innerHTML = cats.length ? cats.slice(0, 6).map(c => `<li><a href="products.html?category=${c.id}">${c.name}</a></li>`).join("") : '<li class="muted">No categories yet</li>';
 }
 async function loadFooterPayments() {
-  try {
-    const snap = await getDocs(query(collection(db, "paymentMethods"), where("active", "==", true)));
-    const row = document.getElementById("footer-payments");
-    if (!row) return;
-    const names = snap.empty ? ["Cash on Delivery"] : snap.docs.map(d => d.data().name);
-    row.innerHTML = names.map(n => `<span class="payment-pill">${n}</span>`).join("");
-  } catch (e) {}
+  const row = document.getElementById("footer-payments");
+  if (!row) return;
+  const methods = await getActivePaymentMethods();
+  const names = methods.length ? methods.map(m => m.name) : ["Cash on Delivery"];
+  row.innerHTML = names.map(n => `<span class="payment-pill">${n}</span>`).join("");
 }
-async function mountMobileBottomNav(activePage) {
-  if (document.getElementById("mobile-bottom-nav")) return; // avoid duplicates
 
-  let s = {};
-  try {
-    const snap = await getDoc(doc(db, "settings", "store"));
-    if (snap.exists()) s = snap.data();
-  } catch (e) {}
-  const rawPhone = (s.whatsapp || s.phone || "").replace(/[^\d]/g, "");
-  const waNumber = rawPhone.startsWith("0") ? "880" + rawPhone.slice(1) : rawPhone;
-
-  const nav = document.createElement("div");
-  nav.className = "mobile-bottom-nav";
-  nav.id = "mobile-bottom-nav";
-  nav.innerHTML = `
-    <button class="mbn-item" id="mbn-category">${iconMenu()}<span>Category</span></button>
-    <a class="mbn-item" href="${waNumber ? `https://wa.me/${waNumber}` : "contact.html"}" target="${waNumber ? "_blank" : "_self"}" rel="noopener">${iconChat()}<span>WhatsApp</span></a>
-    <a class="mbn-item mbn-home ${activePage === "home" ? "active" : ""}" href="index.html">
-      <span class="mbn-home-btn">${iconHome()}</span><span>Home</span>
-    </a>
-    <a class="mbn-item" href="cart.html" id="mbn-cart">${iconCart()}<span id="mbn-cart-label">Cart (0)</span></a>
-    <a class="mbn-item" href="account.html" id="mbn-account">${iconUser()}<span>Login</span></a>
-  `;
-  document.body.appendChild(nav);
-
-  document.getElementById("mbn-category").addEventListener("click", () => {
-    document.getElementById("hamburger-btn")?.click();
-  });
-
-  function refreshMbnCart() {
-    const qty = getLocalCart().reduce((sum, i) => sum + i.qty, 0);
-    document.getElementById("mbn-cart-label").textContent = `Cart (${qty})`;
-  }
-  refreshMbnCart();
-  window.addEventListener("cart:changed", refreshMbnCart);
-
-  onAuthStateChanged(auth, (user) => {
-    const acc = document.getElementById("mbn-account");
-    if (user) {
-      acc.setAttribute("href", "account.html");
-      acc.querySelector("span").textContent = "Account";
-    } else {
-      acc.setAttribute("href", "login.html");
-      acc.querySelector("span").textContent = "Login";
-    }
-  });
-}
 export { signOut, auth };
