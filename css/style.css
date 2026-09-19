@@ -473,3 +473,9 @@ button { font-family: inherit; }
 .search-result-price { font-weight: 700; font-size: .86rem; white-space: nowrap; }
 .search-empty, .search-hint { padding: 24px 16px; text-align: center; color: var(--ink-soft); font-size: .88rem; }
 .search-view-all { display: block; text-align: center; padding: 12px; font-weight: 600; font-size: .86rem; color: var(--primary); border-top: 1px solid var(--border); }
+/* ===== Auth: Google button + divider ===== */
+.btn-google { display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); color: var(--ink); }
+.btn-google:hover { background: var(--surface-2); }
+.auth-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; color: var(--ink-soft); font-size: .8rem; }
+.auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.verify-icon { font-size: 2rem; text-align: center; margin-bottom: 6px; }
