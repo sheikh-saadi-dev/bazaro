@@ -1,7 +1,8 @@
 import {
   auth, db, doc, setDoc, getDoc, serverTimestamp,
   signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile,
-  sendPasswordResetEmail, signOut, onAuthStateChanged
+  sendPasswordResetEmail, signOut, onAuthStateChanged,
+  GoogleAuthProvider, signInWithPopup, sendEmailVerification, reload
 } from "./firebase.js";
 
 export async function registerUser({ name, email, phone, password }) {
@@ -11,11 +12,37 @@ export async function registerUser({ name, email, phone, password }) {
     name, email, phone: phone || "", address: "", role: "customer", status: "active",
     createdAt: serverTimestamp(), updatedAt: serverTimestamp()
   });
+  await sendEmailVerification(cred.user);
   return cred.user;
 }
 
 export async function loginUser(email, password) {
   return signInWithEmailAndPassword(auth, email, password);
+}
+
+export async function loginWithGoogle() {
+  const provider = new GoogleAuthProvider();
+  const cred = await signInWithPopup(auth, provider);
+  const ref = doc(db, "users", cred.user.uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      name: cred.user.displayName || "", email: cred.user.email || "",
+      phone: "", address: "", role: "customer", status: "active",
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+    });
+  }
+  return cred.user;
+}
+
+export async function resendVerificationEmail() {
+  if (auth.currentUser) await sendEmailVerification(auth.currentUser);
+}
+
+export async function checkEmailVerified() {
+  if (!auth.currentUser) return false;
+  await reload(auth.currentUser);
+  return auth.currentUser.emailVerified;
 }
 
 export async function resetPassword(email) {
@@ -43,7 +70,9 @@ export function friendlyAuthError(code) {
     "auth/user-not-found": "No account found with this email.",
     "auth/wrong-password": "Incorrect password.",
     "auth/invalid-credential": "Incorrect email or password.",
-    "auth/too-many-requests": "Too many attempts — please try again later."
+    "auth/too-many-requests": "Too many attempts — please try again later.",
+    "auth/popup-closed-by-user": "Google sign-in was closed before finishing.",
+    "auth/popup-blocked": "Your browser blocked the Google sign-in popup — please allow popups and try again."
   };
   return map[code] || "Something went wrong. Please try again.";
 }
