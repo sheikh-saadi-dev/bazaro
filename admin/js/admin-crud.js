@@ -1,13 +1,14 @@
 import { db, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, orderBy, query } from "../../js/firebase.js";
 import { escapeHtml, toast } from "../../js/utils.js";
 import { confirmModal } from "./admin-ui.js";
+import { openMediaPicker } from "./media-picker.js";
 
 /**
  * config = {
  *   collectionName, title, addLabel,
  *   orderByField?: string,
  *   columns: [{ key, label, render?: (item)=>html }],
- *   fields: [{ key, label, type: 'text'|'number'|'textarea'|'select'|'toggle'|'date', required, options?, default? }],
+ *   fields: [{ key, label, type: 'text'|'number'|'textarea'|'select'|'toggle'|'date'|'image', required, options?, default? }],
  *   emptyMessage
  * }
  */
@@ -66,6 +67,18 @@ export function mountCrudPage(config) {
     if (f.type === "textarea") {
       return `<div class="field"><label>${f.label}</label><textarea data-field="${f.key}" rows="3" ${f.required ? "required" : ""}>${escapeHtml(val || "")}</textarea></div>`;
     }
+    if (f.type === "image") {
+      return `<div class="field">
+        <label>${f.label}</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input data-field="${f.key}" type="text" value="${escapeHtml(val ?? "")}" ${f.required ? "required" : ""} readonly style="flex:1;">
+          <button type="button" class="btn btn-outline btn-sm" data-pick-image="${f.key}">Select</button>
+        </div>
+        <div data-preview="${f.key}" style="margin-top:6px;">
+          ${val ? `<img src="${escapeHtml(val)}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;">` : ""}
+        </div>
+      </div>`;
+    }
     return `<div class="field"><label>${f.label}</label><input data-field="${f.key}" type="${f.type || "text"}" value="${escapeHtml(val ?? "")}" ${f.required ? "required" : ""}></div>`;
   }
 
@@ -89,6 +102,17 @@ export function mountCrudPage(config) {
     const close = () => { backdrop.remove(); document.body.style.overflow = ""; };
     backdrop.addEventListener("click", close);
     backdrop.querySelector("#cancel-btn").addEventListener("click", close);
+
+    backdrop.querySelectorAll("[data-pick-image]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        openMediaPicker((url) => {
+          const key = btn.dataset.pickImage;
+          backdrop.querySelector(`[data-field="${key}"]`).value = url;
+          backdrop.querySelector(`[data-preview="${key}"]`).innerHTML =
+            `<img src="${url}" style="width:60px;height:60px;object-fit:cover;border-radius:8px;">`;
+        });
+      });
+    });
 
     backdrop.querySelector("#crud-form").addEventListener("submit", async (e) => {
       e.preventDefault();
