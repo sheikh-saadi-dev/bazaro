@@ -37,6 +37,29 @@
 
       <button class="btn btn-primary" style="margin-top:20px;" type="submit">Save settings</button>
     </form>
+
+    <h3 style="font-size:1rem;margin-top:36px;">GitHub image hosting</h3>
+    <p class="muted" style="font-size:.85rem;">
+      Used by the "Select Image" button in the product form as a free alternative to Firebase
+      Storage (which needs the Blaze plan). This is saved only in <strong>this browser</strong>,
+      never in your code or Firestore — you'll need to set it up again on any other admin device.
+      Use a <strong>fine-grained personal access token</strong> scoped to
+      <strong>Contents: Read & write</strong> on this one repository only — never a broad,
+      all-repo token.
+    </p>
+    <form id="github-form">
+      <div class="form-grid">
+        <div class="field"><label>GitHub username / org</label><input id="gh-owner" placeholder="e.g. sheikh-saadi-dev"></div>
+        <div class="field"><label>Repository name</label><input id="gh-repo" placeholder="e.g. bazaro-images"></div>
+        <div class="field"><label>Branch</label><input id="gh-branch" placeholder="main"></div>
+        <div class="field"><label>Folder path</label><input id="gh-folder" placeholder="images/products"></div>
+      </div>
+      <div class="field" style="margin-top:10px;"><label>Personal access token</label><input id="gh-token" type="password" placeholder="github_pat_…"></div>
+      <div style="display:flex;gap:10px;margin-top:14px;">
+        <button class="btn btn-primary" type="submit">Save GitHub config</button>
+        <button class="btn btn-outline" type="button" id="gh-clear-btn">Clear</button>
+      </div>
+    </form>
   </div>
 </div>
 <div id="toast-host"></div>
@@ -45,6 +68,7 @@
   import { mountAdminLayout } from "./js/admin-layout.js";
   import { db, doc, getDoc, setDoc } from "../js/firebase.js";
   import { toast } from "../js/utils.js";
+  import { getGithubConfig, setGithubConfig, clearGithubConfig } from "./js/github-storage.js";
 
   await requireAdmin();
   mountAdminLayout("settings.html");
@@ -73,6 +97,32 @@
       toast("Settings saved.");
     } catch (err) { toast("Couldn't save settings.", "err"); }
   });
+
+  function loadGithubForm() {
+    const c = getGithubConfig() || {};
+    document.getElementById("gh-owner").value = c.owner || "";
+    document.getElementById("gh-repo").value = c.repo || "";
+    document.getElementById("gh-branch").value = c.branch || "main";
+    document.getElementById("gh-folder").value = c.folder || "images/products";
+    document.getElementById("gh-token").value = c.token || "";
+  }
+  document.getElementById("github-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    setGithubConfig({
+      owner: document.getElementById("gh-owner").value.trim(),
+      repo: document.getElementById("gh-repo").value.trim(),
+      branch: document.getElementById("gh-branch").value.trim() || "main",
+      folder: document.getElementById("gh-folder").value.trim() || "images/products",
+      token: document.getElementById("gh-token").value.trim()
+    });
+    toast("GitHub config saved on this device.");
+  });
+  document.getElementById("gh-clear-btn").addEventListener("click", () => {
+    clearGithubConfig();
+    loadGithubForm();
+    toast("GitHub config cleared.");
+  });
+  loadGithubForm();
 
   load();
 </script>
