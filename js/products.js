@@ -80,3 +80,42 @@ export function sortProducts(list, mode) {
     default: return arr.sort((a, b) => (b.isTopProduct === true) - (a.isTopProduct === true));
   }
 }
+export function mountPriceRange(hostId, products, onChange) {
+  const host = document.getElementById(hostId);
+  if (!host) return null;
+  const prices = products.map(p => p.discountPrice || p.price).filter(n => typeof n === "number");
+  const min = prices.length ? Math.floor(Math.min(...prices) / 50) * 50 : 0;
+  const max = prices.length ? Math.max(min + 50, Math.ceil(Math.max(...prices) / 50) * 50) : 10000;
+
+  host.innerHTML = `
+    <div class="price-range-values"><span id="pr-min-label"></span><span id="pr-max-label"></span></div>
+    <div class="range-slider">
+      <div class="range-track"></div>
+      <div class="range-fill" id="pr-fill"></div>
+      <input type="range" id="pr-min" min="${min}" max="${max}" step="50" value="${min}">
+      <input type="range" id="pr-max" min="${min}" max="${max}" step="50" value="${max}">
+    </div>
+  `;
+
+  const minInput = host.querySelector("#pr-min");
+  const maxInput = host.querySelector("#pr-max");
+  const fill = host.querySelector("#pr-fill");
+  const minLabel = host.querySelector("#pr-min-label");
+  const maxLabel = host.querySelector("#pr-max-label");
+
+  function paint(fire) {
+    let lo = +minInput.value, hi = +maxInput.value;
+    if (lo > hi) { [lo, hi] = [hi, lo]; minInput.value = lo; maxInput.value = hi; }
+    const span = (max - min) || 1;
+    fill.style.left = (((lo - min) / span) * 100) + "%";
+    fill.style.width = (((hi - lo) / span) * 100) + "%";
+    minLabel.textContent = `৳${lo}`;
+    maxLabel.textContent = `৳${hi}`;
+    if (fire) onChange(lo === min ? null : lo, hi === max ? null : hi);
+  }
+  minInput.addEventListener("input", () => paint(true));
+  maxInput.addEventListener("input", () => paint(true));
+  paint(false);
+
+  return { reset: () => { minInput.value = min; maxInput.value = max; paint(false); } };
+}
