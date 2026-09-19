@@ -3,19 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="preconnect" href="https://www.gstatic.com">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&display=swap">
 <title>Create account — Bazaro</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div id="app-header"></div>
 <main>
-  <div class="auth-shell">
+  <div class="auth-shell" id="auth-shell">
     <h1>Create your account</h1>
     <p class="muted">Save your details for faster checkout.</p>
+
+    <button class="btn btn-google btn-block" id="google-signup-btn" type="button">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.03l2.99-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.97l2.99 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+      Sign up with Google
+    </button>
+    <div class="auth-divider">or</div>
+
     <form id="register-form" novalidate>
       <div class="field"><label for="name">Full name</label><input id="name" required></div>
       <div class="field" style="margin-top:10px;"><label for="email">Email</label><input id="email" type="email" required></div>
@@ -31,9 +34,36 @@
 <div id="toast-host"></div>
 <script type="module">
   import { mountHeader, mountFooter } from "./js/layout.js";
-  import { registerUser, friendlyAuthError } from "./js/auth.js";
+  import { registerUser, loginWithGoogle, friendlyAuthError, resendVerificationEmail, checkEmailVerified, logoutUser } from "./js/auth.js";
   import { toast } from "./js/utils.js";
   mountHeader(); mountFooter();
+
+  const shell = document.getElementById("auth-shell");
+
+  function showVerifyScreen() {
+    shell.innerHTML = `
+      <div class="verify-icon">📧</div>
+      <h1 style="text-align:center;">Verify your email</h1>
+      <p class="muted" style="text-align:center;">We've sent a verification link to your email. Click it, then come back here.</p>
+      <button class="btn btn-primary btn-block" id="verify-continue-btn">I've verified — Continue</button>
+      <button class="btn btn-ghost btn-block" id="verify-resend-btn" style="margin-top:8px;font-size:.82rem;">Resend email</button>
+      <button class="btn btn-ghost btn-block" id="verify-logout-btn" style="margin-top:4px;font-size:.82rem;color:var(--danger);">Use a different account</button>
+      <p class="field-error" id="verify-error" style="text-align:center;margin-top:6px;"></p>
+    `;
+    document.getElementById("verify-continue-btn").addEventListener("click", async () => {
+      const ok = await checkEmailVerified();
+      if (ok) window.location.href = "account.html";
+      else document.getElementById("verify-error").textContent = "Still not verified — check your inbox (and spam folder).";
+    });
+    document.getElementById("verify-resend-btn").addEventListener("click", async () => {
+      await resendVerificationEmail();
+      toast("Verification email sent again.");
+    });
+    document.getElementById("verify-logout-btn").addEventListener("click", async () => {
+      await logoutUser();
+      window.location.reload();
+    });
+  }
 
   document.getElementById("register-form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -46,10 +76,19 @@
         phone: document.getElementById("phone").value.trim(),
         password: document.getElementById("password").value
       });
+      showVerifyScreen();
+    } catch (e2) {
+      err.textContent = friendlyAuthError(e2.code);
+    }
+  });
+
+  document.getElementById("google-signup-btn").addEventListener("click", async () => {
+    try {
+      await loginWithGoogle();
       toast("Account created.");
       window.location.href = "account.html";
     } catch (e2) {
-      err.textContent = friendlyAuthError(e2.code);
+      document.getElementById("form-error").textContent = friendlyAuthError(e2.code);
     }
   });
 </script>
