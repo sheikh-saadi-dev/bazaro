@@ -37,10 +37,7 @@
           <h4>Category</h4>
           <div class="chip-list" id="category-filters"><label class="muted">Loading…</label></div>
           <h4>Price range (৳)</h4>
-          <div class="range-row">
-            <input type="number" id="price-min" placeholder="Min">
-            <input type="number" id="price-max" placeholder="Max">
-          </div>
+          <div id="price-range-host"></div>
           <button class="btn btn-outline btn-sm btn-block" id="clear-filters" style="margin-top:12px;">Clear filters</button>
         </aside>
         <div>
@@ -59,7 +56,7 @@
 
 <script type="module">
   import { mountHeader, mountFooter } from "./js/layout.js";
-  import { fetchPublishedProducts, fetchCategories, productCard, wireProductCardEvents, sortProducts } from "./js/products.js";
+  import { fetchPublishedProducts, fetchCategories, productCard, wireProductCardEvents, sortProducts, mountPriceRange } from "./js/products.js";
   import { debounce } from "./js/utils.js";
 
   mountHeader("products");
@@ -102,16 +99,14 @@
     catHost.innerHTML = `<label><input type="radio" name="cat" value="" ${!state.category ? "checked" : ""}> All</label>` +
       categories.map(c => `<label><input type="radio" name="cat" value="${c.id}" ${state.category === c.id ? "checked" : ""}> ${c.name}</label>`).join("");
     catHost.addEventListener("change", (e) => { state.category = e.target.value; applyFilters(); });
+    const priceRange = mountPriceRange("price-range-host", allProducts, (lo, hi) => { state.min = lo; state.max = hi; applyFilters(); });
     document.getElementById("sort-select").value = state.sort;
     document.getElementById("search-input").addEventListener("input", debounce((e) => { state.search = e.target.value; applyFilters(); }, 220));
     document.getElementById("sort-select").addEventListener("change", (e) => { state.sort = e.target.value; applyFilters(); });
-    document.getElementById("price-min").addEventListener("change", (e) => { state.min = e.target.value ? +e.target.value : null; applyFilters(); });
-    document.getElementById("price-max").addEventListener("change", (e) => { state.max = e.target.value ? +e.target.value : null; applyFilters(); });
     document.getElementById("clear-filters").addEventListener("click", () => {
       state = { search: "", category: "", min: null, max: null, sort: "featured", filter: "" };
       document.getElementById("search-input").value = "";
-      document.getElementById("price-min").value = "";
-      document.getElementById("price-max").value = "";
+      priceRange?.reset();
       document.getElementById("sort-select").value = "featured";
       catHost.querySelector('input[value=""]').checked = true;
       applyFilters();
