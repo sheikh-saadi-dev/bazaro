@@ -1,6 +1,7 @@
 import { initTheme, toggleTheme } from "./theme.js";
 import { auth, onAuthStateChanged, signOut, db, doc, getDoc, collection, getDocs, query, where } from "./firebase.js";
 import { getLocalCart, getLocalWishlist, toast } from "./utils.js";
+import { mountSearchTrigger } from "./search.js";
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -94,6 +95,7 @@ export function mountHeader(activePage = "") {
           <a href="products.html?sort=newest">New Arrivals</a>
         </nav>
         <div class="nav-actions">
+          <button class="icon-btn" id="search-trigger-btn" aria-label="Search"></button>
           <button class="theme-toggle icon-btn" id="theme-btn" aria-label="Toggle dark mode">${iconSun()}</button>
           <a class="icon-wrap icon-btn" href="cart.html" aria-label="Wishlist" id="wish-icon">${iconHeart()}<span class="badge-count" id="wish-count" hidden>0</span></a>
           <a class="icon-wrap icon-btn" href="cart.html" aria-label="Cart" id="cart-icon">${iconCart()}<span class="badge-count" id="cart-count" hidden>0</span></a>
@@ -142,6 +144,7 @@ export function mountHeader(activePage = "") {
 
   applyStoreBranding();
   mountMobileBottomNav(activePage);
+  mountSearchTrigger();
 }
 
 function refreshCounts() {
