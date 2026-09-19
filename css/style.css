@@ -85,7 +85,8 @@ button { font-family: inherit; }
 .icon-btn:hover { background: var(--surface-2); }
 
 /* Header / Nav */
-.site-header { position: sticky; top: 0; z-index: 40; background: var(--bg); border-bottom: 1px solid var(--border); }
+.site-header { position: sticky; top: 0; z-index: 40; background: var(--bg); border-bottom: 1px solid var(--border); min-height: 65px; }
+#app-header { min-height: 65px; display: block; }
 .nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; gap: 16px; }
 .logo { font-family: "Fraunces", serif; font-size: 1.4rem; font-weight: 600; }
 .logo span { color: var(--primary); }
