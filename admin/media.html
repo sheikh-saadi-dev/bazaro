@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Media Library — Bazaro Admin</title>
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<div class="admin-shell" id="admin-shell">
+  <div class="admin-main">
+    <div class="admin-header-row">
+      <h1 style="font-size:1.4rem;">Media Library</h1>
+      <div class="field" style="margin:0;">
+        <input type="file" accept="image/*" id="upload-input">
+      </div>
+    </div>
+    <p class="muted" id="upload-status"></p>
+    <div id="media-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-top:10px;">
+      <div class="skel" style="height:120px;"></div>
+    </div>
+  </div>
+</div>
+<div id="toast-host"></div>
+<script type="module">
+  import { requireAdmin } from "./js/admin-auth.js";
+  import { mountAdminLayout } from "./js/admin-layout.js";
+  import { db, collection, getDocs, addDoc, deleteDoc, doc, query, orderBy, serverTimestamp } from "../js/firebase.js";
+  import { uploadImageToGithub, deleteImageFromGithub, isGithubConfigured } from "./js/github-storage.js";
+  import { confirmModal } from "./js/admin-ui.js";
+  import { toast } from "../js/utils.js";
+
+  await requireAdmin();
+  mountAdminLayout("media.html");
+
+  async function load() {
+    const grid = document.getElementById("media-grid");
+    const snap = await getDocs(query(collection(db, "media"), orderBy("createdAt", "desc")));
+    const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    grid.innerHTML = items.length ? items.map(m => `
+      <div style="position:relative;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <img src="${m.url}" style="width:100%;aspect-ratio:1/1;object-fit:cover;display:block;">
+        <div style="padding:6px 8px;">
+          <button class="action-link" data-copy="${m.url}" style="font-size:.76rem;">Copy URL</button>
+          <button class="action-link danger" data-del="${m.id}" data-path="${m.path || ""}" data-sha="${m.sha || ""}" style="font-size:.76rem;">Delete</button>
+        </div>
+      </div>
+    `).join("") : `<p class="muted" style="grid-column:1/-1;">No images uploaded yet.</p>`;
+
+    grid.querySelectorAll("[data-copy]").forEach(b => b.addEventListener("click", () => {
+      navigator.clipboard.writeText(b.dataset.copy);
+      toast("URL copied.");
+    }));
+    grid.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", async () => {
+      const ok = await confirmModal("Delete this image?", "This removes it from the library and from GitHub. Products still using this image URL will show a broken image.");
+      if (!ok) return;
+      await deleteImageFromGithub(b.dataset.path, b.dataset.sha);
+      await deleteDoc(doc(db, "media", b.dataset.del));
+      toast("Image deleted.");
+      load();
+    }));
+  }
+
+  document.getElementById("upload-input").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const status = document.getElementById("upload-status");
+    if (!isGithubConfigured()) {
+      status.textContent = "GitHub image hosting isn't set up yet — configure it in Admin → Settings.";
+      e.target.value = "";
+      return;
+    }
+    status.textContent = "Uploading…";
+    try {
+      const { url, path, sha } = await uploadImageToGithub(file);
+      await addDoc(collection(db, "media"), { url, path, sha, name: file.name, createdAt: serverTimestamp() });
+      status.textContent = "";
+      toast("Image uploaded.");
+      load();
+    } catch (err) {
+      status.textContent = err.message || "Upload failed.";
+    }
+    e.target.value = "";
+  });
+
+  load();
+</script>
+</body>
+</html>
