@@ -4,7 +4,7 @@ import { adminLogout } from "./admin-auth.js";
 const NAV = [
   ["dashboard.html", "Dashboard"], ["products.html", "Products"], ["categories.html", "Categories"],
   ["orders.html", "Orders"], ["customers.html", "Customers"], ["coupons.html", "Coupons"],
-  ["payment-methods.html", "Payment Methods"], ["sliders.html", "Sliders"],
+  ["payment-methods.html", "Payment Methods"], ["sliders.html", "Sliders"], ["media.html", "Media Library"],
   ["settings.html", "Settings"], ["change-password.html", "Change Password"]
 ];
 
