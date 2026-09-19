@@ -200,7 +200,8 @@ button { font-family: inherit; }
 /* Skeleton */
 .skel { background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 37%, var(--surface-2) 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; border-radius: var(--radius); }
 @keyframes shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
-.skel-card { height: 260px; border-radius: var(--radius-lg); }
+/* .skel-card { height: 260px; border-radius: var(--radius-lg); } */
+.skel-card { aspect-ratio: 1/1.6; border-radius: var(--radius-lg); }
 
 /* Product detail */
 .product-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
