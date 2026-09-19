@@ -55,7 +55,11 @@
           </div>
           <div class="countdown-row" id="countdown-row"></div>
         </div>
-        <div class="flash-grid" id="flash-grid"></div>
+        <div class="rail-wrap">
+          <button class="rail-arrow prev" id="flash-prev" aria-label="Previous">‹</button>
+          <div class="rail" id="flash-grid"><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div></div>
+          <button class="rail-arrow next" id="flash-next" aria-label="Next">›</button>
+        </div>
       </div>
     </div>
   </section>
@@ -83,8 +87,12 @@
   <section class="section">
     <div class="wrap">
       <div class="section-head"><div><h2>Best Sellers</h2><p class="muted" style="margin:0;">Customer favorites, always in style.</p></div></div>
-      <div class="grid-products" id="bestseller-grid"><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div></div>
-    </div>
+      <div class="rail-wrap">
+        <button class="rail-arrow prev" id="best-prev" aria-label="Previous">‹</button>
+        <div class="rail" id="bestseller-grid"><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div></div>
+        <button class="rail-arrow next" id="best-next" aria-label="Next">›</button>
+      </div>
+      </div>
   </section>
 
   <section class="section">
@@ -172,10 +180,12 @@
   }
 
   function renderFlashSale() {
-    const sale = allProducts.filter(p => p.isTopSale && p.discountPrice);
+    const sale = allProducts.filter(p => p.isTopSale && p.discountPrice).slice(0, 10);
     const host = document.getElementById("flash-grid");
-    host.innerHTML = sale.length ? sale.slice(0, 4).map(productCard).join("") : `<p class="muted" style="color:rgba(255,255,255,.7);">No active deals right now — check back soon.</p>`;
-    wireProductCardEvents(host, sale.slice(0, 4));
+    host.innerHTML = sale.length ? sale.map(productCard).join("") : `<p class="muted" style="color:rgba(255,255,255,.7);">No active deals right now — check back soon.</p>`;
+    wireProductCardEvents(host, sale);
+    document.getElementById("flash-prev").addEventListener("click", () => host.scrollBy({ left: -400, behavior: "smooth" }));
+    document.getElementById("flash-next").addEventListener("click", () => host.scrollBy({ left: 400, behavior: "smooth" }));
     startCountdown();
   }
 
@@ -208,10 +218,12 @@
   }
 
   function renderBestSellers() {
-    const list = sortProducts(allProducts, "best-selling").slice(0, 5);
+    const list = sortProducts(allProducts, "best-selling").slice(0, 10);
     const host = document.getElementById("bestseller-grid");
     host.innerHTML = list.length ? list.map(productCard).join("") : `<p class="muted">No products yet.</p>`;
     wireProductCardEvents(host, list);
+    document.getElementById("best-prev").addEventListener("click", () => host.scrollBy({ left: -400, behavior: "smooth" }));
+    document.getElementById("best-next").addEventListener("click", () => host.scrollBy({ left: 400, behavior: "smooth" }));
   }
 
   document.getElementById("newsletter-form").addEventListener("submit", async (e) => {
