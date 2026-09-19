@@ -1,4 +1,5 @@
-import { db, collection, getDocs, query, where, orderBy } from "./firebase.js";
+// import { db, collection, getDocs, query, where, orderBy } from "./firebase.js";
+import { db, collection, getDocs, query, where } from "./firebase.js";
 import { escapeHtml } from "./utils.js";
 
 const FALLBACK_SLIDES = [
@@ -14,8 +15,10 @@ export async function mountHero(hostId = "hero-root") {
   if (!host) return;
   let slides = [];
   try {
-    const snap = await getDocs(query(collection(db, "sliders"), where("active", "==", true), orderBy("order", "asc")));
-    slides = snap.docs.map(d => d.data());
+    // const snap = await getDocs(query(collection(db, "sliders"), where("active", "==", true), orderBy("order", "asc")));
+    // slides = snap.docs.map(d => d.data());
+    const snap = await getDocs(query(collection(db, "sliders"), where("active", "==", true)));
+    slides = snap.docs.map(d => d.data()).sort((a, b) => (a.order || 0) - (b.order || 0));
   } catch (e) { /* fall through to defaults */ }
   if (!slides.length) slides = FALLBACK_SLIDES;
 
