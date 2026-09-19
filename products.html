@@ -65,7 +65,7 @@
   const params = new URLSearchParams(location.search);
   let allProducts = [];
   let state = {
-    search: "", category: params.get("category") || "", min: null, max: null,
+    search: params.get("search") || "", category: params.get("category") || "", min: null, max: null,
     sort: params.get("sort") || "featured",
     filter: params.get("filter") || ""
   };
@@ -101,6 +101,7 @@
     catHost.addEventListener("change", (e) => { state.category = e.target.value; applyFilters(); });
     const priceRange = mountPriceRange("price-range-host", allProducts, (lo, hi) => { state.min = lo; state.max = hi; applyFilters(); });
     document.getElementById("sort-select").value = state.sort;
+    document.getElementById("search-input").value = state.search;
     document.getElementById("search-input").addEventListener("input", debounce((e) => { state.search = e.target.value; applyFilters(); }, 220));
     document.getElementById("sort-select").addEventListener("change", (e) => { state.sort = e.target.value; applyFilters(); });
     document.getElementById("clear-filters").addEventListener("click", () => {
