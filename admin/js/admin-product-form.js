@@ -1,10 +1,10 @@
 import { requireAdmin } from "./admin-auth.js";
 import { mountAdminLayout } from "./admin-layout.js";
 import {
-  db, storage, collection, getDocs, getDoc, doc, addDoc, updateDoc, serverTimestamp,
-  ref, uploadBytes, getDownloadURL
+  db, collection, getDocs, getDoc, doc, addDoc, updateDoc, serverTimestamp
 } from "../../js/firebase.js";
 import { escapeHtml, toast } from "../../js/utils.js";
+import { openMediaPicker } from "./media-picker.js";
 
 await requireAdmin();
 mountAdminLayout("products.html");
@@ -48,25 +48,11 @@ function renderImagePreview() {
   document.getElementById("img-preview").querySelectorAll("img").forEach(img => img.addEventListener("click", () => { images.splice(+img.dataset.i, 1); renderImagePreview(); }));
 }
 
-document.getElementById("p-image-url").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); const v = e.target.value.trim(); if (v) { images.push(v); e.target.value = ""; renderImagePreview(); } }
-});
-document.getElementById("p-image-file").addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    toast("Uploading image…");
-    const path = `products/${Date.now()}_${file.name}`;
-    const sref = ref(storage, path);
-    await uploadBytes(sref, file);
-    const url = await getDownloadURL(sref);
+document.getElementById("p-select-image-btn").addEventListener("click", () => {
+  openMediaPicker((url) => {
     images.push(url);
     renderImagePreview();
-    toast("Image uploaded.");
-  } catch (err) {
-    toast("Image upload failed — check Firebase Storage is enabled.", "err");
-  }
-  e.target.value = "";
+  });
 });
 
 async function loadExisting() {
@@ -91,8 +77,6 @@ async function loadExisting() {
 
 document.getElementById("product-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const urlBox = document.getElementById("p-image-url").value.trim();
-  if (urlBox) images.push(urlBox);
   if (!images.length) { toast("Add at least one product image.", "err"); return; }
 
   const categoryId = document.getElementById("p-category").value;
