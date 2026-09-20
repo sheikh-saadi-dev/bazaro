@@ -35,8 +35,21 @@
         <div class="img-preview-row" id="img-preview"></div>
 
         <h3 style="font-size:1rem;margin-top:20px;">Variants (optional)</h3>
+        <p class="muted" style="font-size:.82rem;">Use "Size" or "Color" for built-in styling, or "Custom" for anything else (Material, Model…).</p>
         <div id="variants-host"></div>
         <button type="button" class="btn btn-outline btn-sm" id="add-variant-btn">+ Add variant group</button>
+
+        <h3 style="font-size:1rem;margin-top:20px;">Product page details (optional)</h3>
+        <div class="field"><label>Rating (0–5, e.g. 4.8) — leave blank to hide</label><input id="p-rating" type="number" min="0" max="5" step="0.1"></div>
+        <div class="field" style="margin-top:8px;"><label>Review count — leave blank to hide</label><input id="p-review-count" type="number" min="0" step="1"></div>
+        <div class="field" style="margin-top:8px;"><label>Materials tab content</label><textarea id="p-materials" rows="2" placeholder="e.g. 100% heavyweight cotton, pre-shrunk"></textarea></div>
+        <div class="field" style="margin-top:8px;"><label>Size & Fit tab content</label><textarea id="p-sizefit" rows="2" placeholder="e.g. Runs true to size, model wears M"></textarea></div>
+        <div class="field" style="margin-top:8px;"><label>Shipping & Returns tab content</label><textarea id="p-shipping" rows="2"></textarea></div>
+        <div class="field" style="margin-top:8px;">
+          <label>Detail banner image (optional, shown below the tabs)</label>
+          <button type="button" class="btn btn-outline btn-sm" id="p-select-banner-btn">Select Image</button>
+          <div id="banner-preview" style="margin-top:6px;"></div>
+        </div>
       </div>
 
       <div class="summary-card">
