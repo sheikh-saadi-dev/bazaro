@@ -480,3 +480,41 @@ button { font-family: inherit; }
 .auth-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; color: var(--ink-soft); font-size: .8rem; }
 .auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 .verify-icon { font-size: 2rem; text-align: center; margin-bottom: 6px; }
+/* ===== Product page v2 (Velora-style) ===== */
+.pd-media { display: flex; gap: 12px; }
+.pd-thumbs-col { display: flex; flex-direction: column; gap: 8px; width: 64px; flex-shrink: 0; }
+.pd-thumbs-col img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 2px solid transparent; cursor: pointer; }
+.pd-thumbs-col img.active { border-color: var(--primary); }
+.pd-main-wrap { position: relative; flex: 1; }
+.pd-main-wrap .gallery-main { margin-bottom: 0; }
+.pd-zoom-btn { position: absolute; bottom: 12px; right: 12px; width: 38px; height: 38px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+@media (max-width: 640px) {
+  .pd-media { flex-direction: column-reverse; }
+  .pd-thumbs-col { flex-direction: row; width: auto; overflow-x: auto; }
+}
+
+.pd-rating-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.pd-stars { color: var(--accent); font-size: .95rem; letter-spacing: 1px; }
+.pd-rating-count { font-size: .82rem; color: var(--ink-soft); }
+
+.swatch-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.swatch { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 2px solid var(--border); position: relative; }
+.swatch.active::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--primary); }
+.pd-color-label { font-size: .82rem; color: var(--ink-soft); margin-bottom: 8px; }
+
+.feature-row-inline { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+.feature-row-inline .feature-item { flex: 1; min-width: 140px; }
+.feature-row-inline .feature-icon { width: 34px; height: 34px; font-size: .95rem; }
+
+.pd-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: 40px 0 20px; overflow-x: auto; }
+.pd-tab-btn { padding: 10px 16px; background: none; border: none; cursor: pointer; font-weight: 600; font-size: .88rem; color: var(--ink-soft); border-bottom: 2px solid transparent; white-space: nowrap; }
+.pd-tab-btn.active { color: var(--ink); border-color: var(--primary); }
+.pd-tab-panel { color: var(--ink-soft); line-height: 1.7; }
+.pd-tab-panel ul { padding-left: 18px; margin: 10px 0 0; }
+.pd-tab-panel li { margin-bottom: 6px; }
+
+.pd-banner-img { width: 100%; border-radius: var(--radius-lg); overflow: hidden; margin: 20px 0 40px; aspect-ratio: 21/9; }
+.pd-banner-img img { width: 100%; height: 100%; object-fit: cover; }
+
+.pd-lightbox-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 90; display: flex; align-items: center; justify-content: center; padding: 20px; cursor: zoom-out; }
+.pd-lightbox-backdrop img { max-width: 100%; max-height: 100%; border-radius: 8px; }
