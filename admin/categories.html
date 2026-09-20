@@ -30,11 +30,13 @@
     addLabel: "Add category",
     emptyMessage: "No categories yet.",
     columns: [
+      { key: "imageUrl", label: "Image", render: (i) => i.imageUrl ? `<img class="thumb" src="${i.imageUrl}" alt="">` : "—" },
       { key: "name", label: "Name" },
       { key: "active", label: "Status", render: (i) => i.active ? "Active" : "Disabled" },
     ],
     fields: [
       { key: "name", label: "Category name", required: true },
+      { key: "imageUrl", label: "Category Image", type: "image" },
       { key: "active", label: "Active", type: "toggle", default: true },
     ]
   });
