@@ -160,7 +160,7 @@
     const host = document.getElementById("cat-icon-row");
     host.innerHTML = categories.slice(0, 6).map(c => `
       <a class="cat-icon-card" href="products.html?category=${c.id}">
-        <div class="cat-icon-circle">${escapeHtml((c.name || "?")[0].toUpperCase())}</div>
+        <div class="cat-icon-circle">${c.imageUrl ? `<img src="${c.imageUrl}" alt="${escapeHtml(c.name)}">` : escapeHtml((c.name || "?")[0].toUpperCase())}</div>
         <span>${escapeHtml(c.name)}</span>
       </a>`).join("") + `
       <a class="cat-icon-card" href="products.html">
